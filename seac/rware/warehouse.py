@@ -140,6 +140,45 @@ class Shelf(Entity):
         return (_LAYER_SHELFS,)
 
 
+class Person(Entity):
+    """
+    A dynamic obstable; a person walking in a set path around the warehouse
+    """
+
+    counter = 0
+
+    def __init__(self, x: int, y: int, dir_: Direction):
+        Person.counter += 1
+        super().__init__(Person.counter, x, y)
+        self.dir = dir_
+        self.req_action: Optional[Action] = None
+
+    @property
+    def collision_layers(self):
+        return (_LAYER_AGENTS,)
+
+    def req_location(self, grid_size) -> Tuple[int, int]:
+        if self.req_action != Action.FORWARD:
+            return self.x, self.y
+        elif self.dir == Direction.UP:
+            return self.x, max(0, self.y - 1)
+        elif self.dir == Direction.DOWN:
+            return self.x, min(grid_size[0] - 1, self.y + 1)
+        elif self.dir == Direction.LEFT:
+            return max(0, self.x - 1), self.y
+        elif self.dir == Direction.RIGHT:
+            return min(grid_size[1] - 1, self.x + 1), self.y
+
+    def req_direction(self) -> Direction:
+        wraplist = [Direction.UP, Direction.RIGHT, Direction.DOWN, Direction.LEFT]
+        if self.req_action == Action.RIGHT:
+            return wraplist[(wraplist.index(self.dir) + 1) % len(wraplist)]
+        elif self.req_action == Action.LEFT:
+            return wraplist[(wraplist.index(self.dir) - 1) % len(wraplist)]
+        else:
+            return self.dir
+
+
 class Warehouse(gym.Env):
 
     metadata = {"render.modes": ["human", "rgb_array"]}
@@ -150,6 +189,7 @@ class Warehouse(gym.Env):
         column_height: int,
         shelf_rows: int,
         n_agents: int,
+        n_people: int,
         msg_bits: int,
         sensor_range: int,
         request_queue_size: int,
@@ -240,6 +280,7 @@ class Warehouse(gym.Env):
             self._make_layout_from_str(layout)
 
         self.n_agents = n_agents
+        self.n_people = n_people
         self.msg_bits = msg_bits
         self.sensor_range = sensor_range
         self.max_inactivity_steps: Optional[int] = max_inactivity_steps
@@ -638,6 +679,7 @@ class Warehouse(gym.Env):
     def reset(self):
         Shelf.counter = 0
         Agent.counter = 0
+        Person.counter = 0
         self._cur_inactive_steps = 0
         self._cur_steps = 0
 
@@ -653,6 +695,12 @@ class Warehouse(gym.Env):
             )
             if not self._is_highway(x, y)
         ]
+
+        # make people obstacles
+        people_locs = [21]
+        people_locs = np.unravel_index(people_locs, self.grid_size)
+        people_dirs = [Direction.RIGHT]
+        self.people = [Person(x, y, dir_) for y, x, dir_ in zip(*people_locs, people_dirs)]
 
         # spawn agents at random locations
         agent_locs = np.random.choice(
