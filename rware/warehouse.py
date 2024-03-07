@@ -189,13 +189,13 @@ class Warehouse(gym.Env):
         column_height: int,
         shelf_rows: int,
         n_agents: int,
-        n_people: int,
         msg_bits: int,
         sensor_range: int,
         request_queue_size: int,
         max_inactivity_steps: Optional[int],
         max_steps: Optional[int],
         reward_type: RewardType,
+        n_people: int = 1,
         layout: str = None,
         observation_type: ObserationType = ObserationType.FLATTENED,
         image_observation_layers: List[ImageLayer] = [
@@ -697,7 +697,7 @@ class Warehouse(gym.Env):
         ]
 
         # make people obstacles
-        people_locs = [53]
+        people_locs = [21]
         people_locs = np.unravel_index(people_locs, self.grid_size)
         people_dirs = [Direction.RIGHT]
         self.people = [Person(x, y, dir_) for y, x, dir_ in zip(*people_locs, people_dirs)]
