@@ -829,19 +829,17 @@ class Warehouse(gym.Env):
 if __name__ == "__main__":
     env = Warehouse(9, 8, 3, 10, 3, 1, 5, None, None, RewardType.GLOBAL)
     env.reset()
-    print(env.action_space)
-    print(env.observation_space)
 
-    # import time
+    import time
 
-    # from tqdm import tqdm
+    from tqdm import tqdm
 
-    # time.sleep(2)
-    # # env.render()
-    # # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
+    time.sleep(2)
+    # env.render()
+    # env.step(18 * [Action.LOAD] + 2 * [Action.NOOP])
 
-    # for _ in tqdm(range(1000000)):
-    #     # time.sleep(2)
-    #     # env.render()
-    #     actions = env.action_space.sample()
-    #     env.step(actions)
+    for _ in tqdm(range(1000000)):
+        # time.sleep(2)
+        # env.render()
+        actions = env.action_space.sample()
+        env.step(actions)
