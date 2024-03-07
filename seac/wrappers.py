@@ -1,4 +1,3 @@
-
 import math
 from collections import deque
 from time import perf_counter
@@ -6,12 +5,12 @@ from time import perf_counter
 import gym
 import numpy as np
 from gym import ObservationWrapper, spaces
-from gym.wrappers import TimeLimit as GymTimeLimit
 from gym.wrappers import Monitor as GymMonitor
+from gym.wrappers import TimeLimit as GymTimeLimit
 
 
 class RecordEpisodeStatistics(gym.Wrapper):
-    """ Multi-agent version of RecordEpisodeStatistics gym wrapper"""
+    """Multi-agent version of RecordEpisodeStatistics gym wrapper"""
 
     def __init__(self, env, deque_size=100):
         super().__init__(env)
@@ -67,10 +66,9 @@ class FlattenObservation(ObservationWrapper):
         self.observation_space = spaces.Tuple(tuple(ma_spaces))
 
     def observation(self, observation):
-        return tuple([
-            spaces.flatten(obs_space, obs)
-            for obs_space, obs in zip(self.env.observation_space, observation)
-        ])
+        return tuple(
+            [spaces.flatten(obs_space, obs) for obs_space, obs in zip(self.env.observation_space, observation)]
+        )
 
 
 class SquashDones(gym.Wrapper):
@@ -101,9 +99,10 @@ class TimeLimit(GymTimeLimit):
         observation, reward, done, info = self.env.step(action)
         self._elapsed_steps += 1
         if self._elapsed_steps >= self._max_episode_steps:
-            info['TimeLimit.truncated'] = not all(done)
+            info["TimeLimit.truncated"] = not all(done)
             done = len(observation) * [True]
         return observation, reward, done, info
+
 
 class ClearInfo(gym.Wrapper):
     def step(self, action):
@@ -113,13 +112,21 @@ class ClearInfo(gym.Wrapper):
 
 class Monitor(GymMonitor):
     def _after_step(self, observation, reward, done, info):
-        if not self.enabled: return done
+        if not self.enabled:
+            return done
 
-        if all(done) and self.env_semantics_autoreset:
-            # For envs with BlockingReset wrapping VNCEnv, this observation will be the first one of the new episode
-            self.reset_video_recorder()
-            self.episode_id += 1
-            self._flush()
+        if type(done) is list:
+            if all(done) and self.env_semantics_autoreset:
+                # For envs with BlockingReset wrapping VNCEnv, this observation will be the first one of the new episode
+                self.reset_video_recorder()
+                self.episode_id += 1
+                self._flush()
+        else:
+            if done and self.env_semantics_autoreset:
+                # For envs with BlockingReset wrapping VNCEnv, this observation will be the first one of the new episode
+                self.reset_video_recorder()
+                self.episode_id += 1
+                self._flush()
 
         # Record stats
         self.stats_recorder.after_step(observation, sum(reward), all(done), info)
