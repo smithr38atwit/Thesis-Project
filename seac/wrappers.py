@@ -121,15 +121,18 @@ class Monitor(GymMonitor):
                 self.reset_video_recorder()
                 self.episode_id += 1
                 self._flush()
+            # Record stats
+            self.stats_recorder.after_step(observation, sum(reward), all(done), info)
+
         else:
             if done and self.env_semantics_autoreset:
                 # For envs with BlockingReset wrapping VNCEnv, this observation will be the first one of the new episode
                 self.reset_video_recorder()
                 self.episode_id += 1
                 self._flush()
+            # Record stats
+            self.stats_recorder.after_step(observation, sum(reward), done, info)
 
-        # Record stats
-        self.stats_recorder.after_step(observation, sum(reward), all(done), info)
         # Record video
         self.video_recorder.capture_frame()
 
