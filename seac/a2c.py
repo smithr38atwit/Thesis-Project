@@ -34,7 +34,7 @@ def config():
     num_processes = 4
     num_steps = 5
 
-    device = "cpu"
+    device = "cpu"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class A2C:
