@@ -42,6 +42,17 @@ class Action(Enum):
     TOGGLE_LOAD = 4
 
 
+class PersonAction(Enum):
+    """
+    Actions that dynamic obstacles can take
+    """
+
+    NOOP = 0
+    FORWARD = 1
+    LEFT = 2
+    RIGHT = 3
+
+
 class Direction(Enum):
     UP = 0
     DOWN = 1
@@ -73,6 +84,14 @@ class ImageLayer(Enum):
     AGENT_LOAD = 4  # binary layer indicating agents with load
     GOALS = 5  # binary layer indicating goal/ delivery locations
     ACCESSIBLE = 6  # binary layer indicating accessible cells (all but occupied cells/ out of map)
+
+
+class MoveType(Enum):
+    """
+    Movement types for dynamic obstacles
+    """
+
+    RANDOM = 0
 
 
 class Entity:
@@ -142,23 +161,24 @@ class Shelf(Entity):
 
 class Person(Entity):
     """
-    A dynamic obstable; a person walking in a set path around the warehouse
+    A dynamic obstable; a person walking around the warehouse
     """
 
     counter = 0
 
-    def __init__(self, x: int, y: int, dir_: Direction):
-        Person.counter += 1
+    def __init__(self, x: int, y: int, dir_: Direction, move_type_: MoveType = MoveType.RANDOM):
+        Person.counter -= 1
         super().__init__(Person.counter, x, y)
         self.dir = dir_
-        self.req_action: Optional[Action] = None
+        self.move_type = move_type_
+        self.req_action: Optional[PersonAction] = None
 
     @property
     def collision_layers(self):
-        return (_LAYER_AGENTS,)
+        return (_LAYER_AGENTS, _LAYER_SHELFS)
 
     def req_location(self, grid_size) -> Tuple[int, int]:
-        if self.req_action != Action.FORWARD:
+        if self.req_action != PersonAction.FORWARD:
             return self.x, self.y
         elif self.dir == Direction.UP:
             return self.x, max(0, self.y - 1)
@@ -171,9 +191,9 @@ class Person(Entity):
 
     def req_direction(self) -> Direction:
         wraplist = [Direction.UP, Direction.RIGHT, Direction.DOWN, Direction.LEFT]
-        if self.req_action == Action.RIGHT:
+        if self.req_action == PersonAction.RIGHT:
             return wraplist[(wraplist.index(self.dir) + 1) % len(wraplist)]
-        elif self.req_action == Action.LEFT:
+        elif self.req_action == PersonAction.LEFT:
             return wraplist[(wraplist.index(self.dir) - 1) % len(wraplist)]
         else:
             return self.dir
@@ -339,6 +359,7 @@ class Warehouse(gym.Env):
 
         self.highways = np.zeros(self.grid_size, dtype=np.int32)
 
+        # TODO: consider modifying for static obstacles
         highway_func = lambda x, y: (
             (x % 3 == 0)  # vertical highways
             or (y % (self.column_height + 1) == 0)  # horizontal highways
@@ -365,6 +386,7 @@ class Warehouse(gym.Env):
         self.grid = np.zeros((_COLLISION_LAYERS, *self.grid_size), dtype=np.int32)
         self.highways = np.zeros(self.grid_size, dtype=np.int32)
 
+        # TODO: consider modifying for static obstacles
         for y, line in enumerate(lines):
             for x, char in enumerate(line):
                 assert char.lower() in "gx."
@@ -416,6 +438,7 @@ class Warehouse(gym.Env):
         self._obs_bits_per_agent = 1 + len(Direction) + self.msg_bits
         self._obs_bits_per_shelf = 2
         self._obs_bits_for_requests = 2
+        self._obs_bits_per_person = 1 + len(Direction)
 
         self._obs_sensor_locations = (1 + 2 * self.sensor_range) ** 2
 
@@ -423,6 +446,7 @@ class Warehouse(gym.Env):
             self._obs_bits_for_self
             + self._obs_sensor_locations * self._obs_bits_per_agent
             + self._obs_sensor_locations * self._obs_bits_per_shelf
+            + self._obs_sensor_locations * self._obs_bits_per_person
         )
 
         if self.normalised_coordinates:
@@ -462,6 +486,8 @@ class Warehouse(gym.Env):
                                                     "local_message": spaces.MultiBinary(self.msg_bits),
                                                     "has_shelf": spaces.MultiBinary(1),
                                                     "shelf_requested": spaces.MultiBinary(1),
+                                                    "has_person": spaces.MultiBinary(1),
+                                                    "person_direction": spaces.Discrete(4),
                                                 }
                                             )
                                         ),
@@ -610,7 +636,7 @@ class Warehouse(gym.Env):
             obs.write([int(self._is_highway(agent.x, agent.y))])
 
             for i, (id_agent, id_shelf) in enumerate(zip(agents, shelfs)):
-                if id_agent == 0:
+                if id_agent <= 0:
                     obs.skip(1)
                     obs.write([1.0])
                     obs.skip(3 + self.msg_bits)
@@ -625,6 +651,15 @@ class Warehouse(gym.Env):
                     obs.skip(2)
                 else:
                     obs.write([1.0, int(self.shelfs[id_shelf - 1] in self.request_queue)])
+                if id_agent < 0:
+                    obs.write([1.0])
+                    direction = np.zeros(4)
+                    direction[self.people[-1 * id_agent - 1].dir.value] = 1.0
+                    obs.write(direction)
+                else:
+                    obs.skip(1)
+                    obs.write([1.0])
+                    obs.skip(3)
 
             return obs.vector
 
@@ -646,18 +681,28 @@ class Warehouse(gym.Env):
         # --- sensor data
         obs["sensors"] = tuple({} for _ in range(self._obs_sensor_locations))
 
-        # find neighboring agents
+        # find neighboring agents and people
         for i, id_ in enumerate(agents):
             if id_ == 0:
                 obs["sensors"][i]["has_agent"] = [0]
                 obs["sensors"][i]["direction"] = 0
                 obs["sensors"][i]["local_message"] = self.msg_bits * [0]
-            else:
+                obs["sensors"][i]["has_person"] = [0]
+                obs["sensors"][i]["person_direction"] = 0
+            elif id_ > 0:
                 obs["sensors"][i]["has_agent"] = [1]
                 obs["sensors"][i]["direction"] = self.agents[id_ - 1].dir.value
                 obs["sensors"][i]["local_message"] = self.agents[id_ - 1].message
+                obs["sensors"][i]["has_person"] = [0]
+                obs["sensors"][i]["person_direction"] = 0
+            else:
+                obs["sensors"][i]["has_agent"] = [0]
+                obs["sensors"][i]["direction"] = 0
+                obs["sensors"][i]["local_message"] = self.msg_bits * [0]
+                obs["sensors"][i]["has_person"] = [1]
+                obs["sensors"][i]["person_direction"] = self.people[-1 * id_ - 1].dir.value
 
-        # find neighboring shelfs:
+        # find neighboring shelfs
         for i, id_ in enumerate(shelfs):
             if id_ == 0:
                 obs["sensors"][i]["has_shelf"] = [0]
@@ -675,6 +720,9 @@ class Warehouse(gym.Env):
 
         for a in self.agents:
             self.grid[_LAYER_AGENTS, a.y, a.x] = a.id
+
+        for p in self.people:
+            self.grid[_LAYER_AGENTS, p.y, p.x] = p.id
 
     def reset(self):
         Shelf.counter = 0
@@ -696,12 +744,6 @@ class Warehouse(gym.Env):
             if not self._is_highway(x, y)
         ]
 
-        # make people obstacles
-        people_locs = [21]
-        people_locs = np.unravel_index(people_locs, self.grid_size)
-        people_dirs = [Direction.RIGHT]
-        self.people = [Person(x, y, dir_) for y, x, dir_ in zip(*people_locs, people_dirs)]
-
         # spawn agents at random locations
         agent_locs = np.random.choice(
             np.arange(self.grid_size[0] * self.grid_size[1]),
@@ -712,6 +754,17 @@ class Warehouse(gym.Env):
         # and direction
         agent_dirs = np.random.choice([d for d in Direction], size=self.n_agents)
         self.agents = [Agent(x, y, dir_, self.msg_bits) for y, x, dir_ in zip(*agent_locs, agent_dirs)]
+
+        # make people obstacles
+        agent_locs_set = set(zip(agent_locs[1], agent_locs[0]))
+        people_locs = []
+        # Keep choosing random locations until all are valid
+        while len(people_locs) < self.n_people:
+            loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
+            if self._is_highway(loc[0], loc[1]) and loc not in agent_locs_set:
+                people_locs.append(loc)
+        people_dirs = np.random.choice([d for d in Direction], size=self.n_people)
+        self.people = [Person(x, y, dir_) for (x, y), dir_ in zip(people_locs, people_dirs)]
 
         self._recalc_grid()
 
@@ -724,7 +777,7 @@ class Warehouse(gym.Env):
 
     def step(self, actions: List[Action]) -> Tuple[List[np.ndarray], List[float], List[bool], Dict]:
         assert len(actions) == len(self.agents)
-
+        # TODO: punish for close calls with people
         for agent, action in zip(self.agents, actions):
             if self.msg_bits > 0:
                 agent.req_action = Action(action[0])
@@ -732,15 +785,19 @@ class Warehouse(gym.Env):
             else:
                 agent.req_action = Action(action)
 
-        # # stationary agents will certainly stay where they are
-        # stationary_agents = [agent for agent in self.agents if agent.action != Action.FORWARD]
+        for person in self.people:
+            if person.move_type == MoveType.RANDOM:
+                person.req_action = np.random.choice(list(PersonAction))
+            # TODO: implement other move types
+            else:
+                person.req_action = PersonAction.NOOP
 
-        # # forward agents will move only if they avoid collisions
-        # forward_agents = [agent for agent in self.agents if agent.action == Action.FORWARD]
         commited_agents = set()
+        commited_people = set()
 
         G = nx.DiGraph()
 
+        # Populate graph with possible moves for agents
         for agent in self.agents:
             start = agent.x, agent.y
             target = agent.req_location(self.grid_size)
@@ -762,8 +819,20 @@ class Warehouse(gym.Env):
             else:
                 G.add_edge(start, target)
 
+        # Populate graph with possible moves for people
+        for person in self.people:
+            start = person.x, person.y
+            target = person.req_location(self.grid_size)
+
+            if self.grid[_LAYER_SHELFS, target[1], target[0]]:
+                person.req_action = Action.NOOP
+                G.add_edge(start, start)
+            else:
+                G.add_edge(start, target)
+
         wcomps = [G.subgraph(c).copy() for c in nx.weakly_connected_components(G)]
 
+        # Resolve conflicts and deadlocks
         for comp in wcomps:
             try:
                 # if we find a cycle in this component we have to
@@ -778,13 +847,17 @@ class Warehouse(gym.Env):
                     agent_id = self.grid[_LAYER_AGENTS, start_node[1], start_node[0]]
                     if agent_id > 0:
                         commited_agents.add(agent_id)
+                    elif agent_id < 0:
+                        commited_people.add(agent_id)
             except nx.NetworkXNoCycle:
 
                 longest_path = nx.algorithms.dag_longest_path(comp)
                 for x, y in longest_path:
                     agent_id = self.grid[_LAYER_AGENTS, y, x]
-                    if agent_id:
+                    if agent_id > 0:
                         commited_agents.add(agent_id)
+                    elif agent_id < 0:
+                        commited_people.add(agent_id)
 
         commited_agents = set([self.agents[id_ - 1] for id_ in commited_agents])
         failed_agents = set(self.agents) - commited_agents
@@ -793,8 +866,25 @@ class Warehouse(gym.Env):
             assert agent.req_action == Action.FORWARD
             agent.req_action = Action.NOOP
 
+        commited_people = set([self.people[-1 * id_ - 1] for id_ in commited_people])
+        failed_people = set(self.people) - commited_people
+
+        for person in failed_people:
+            assert person.req_action == PersonAction.FORWARD
+            person.req_action = PersonAction.NOOP
+
+        # Perform actions for each person
+        for person in self.people:
+            person.prev_x, person.prev_y = person.x, person.y
+
+            if person.req_action == PersonAction.FORWARD:
+                person.x, person.y = person.req_location(self.grid_size)
+            elif person.req_action in [PersonAction.LEFT, PersonAction.RIGHT]:
+                person.dir = person.req_direction()
+
         rewards = np.zeros(self.n_agents)
 
+        # Perform actions for each agent
         for agent in self.agents:
             agent.prev_x, agent.prev_y = agent.x, agent.y
 
@@ -818,6 +908,7 @@ class Warehouse(gym.Env):
 
         self._recalc_grid()
 
+        # Check for deliveries and reward agents
         shelf_delivered = False
         for y, x in self.goals:
             shelf_id = self.grid[_LAYER_SHELFS, x, y]
