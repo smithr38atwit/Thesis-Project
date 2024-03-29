@@ -30,7 +30,7 @@ for size, diff, agents in _perms:
             "shelf_columns": _sizes[size][1],
             "n_agents": agents,
             "msg_bits": 0,
-            "sensor_range": 1,
+            "sensor_range": 2,
             "request_queue_size": int(agents * _difficulty[diff]),
             "max_inactivity_steps": None,
             "max_steps": 500,

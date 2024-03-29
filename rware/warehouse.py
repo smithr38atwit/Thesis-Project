@@ -92,6 +92,7 @@ class MoveType(Enum):
     """
 
     RANDOM = 0
+    RECTANGLE = 1
 
 
 class Entity:
@@ -166,11 +167,21 @@ class Person(Entity):
 
     counter = 0
 
-    def __init__(self, x: int, y: int, dir_: Direction, move_type_: MoveType = MoveType.RANDOM):
+    def __init__(
+        self,
+        x: int,
+        y: int,
+        dir_: Direction,
+        move_type_: MoveType = MoveType.RANDOM,
+        rec_size_: Tuple[int, int] = (0, 0),
+        steps_: int = 0,
+    ):
         Person.counter -= 1
         super().__init__(Person.counter, x, y)
         self.dir = dir_
         self.move_type = move_type_
+        self.rec_size = rec_size_
+        self.steps = steps_
         self.req_action: Optional[PersonAction] = None
 
     @property
@@ -227,6 +238,9 @@ class Warehouse(gym.Env):
         ],
         image_observation_directional: bool = True,
         normalised_coordinates: bool = False,
+        people_starts: Optional[List] = [(3, 1)],  # (x, y)
+        people_move_types: List[MoveType] = [MoveType.RECTANGLE],
+        rec_sizes: List[Tuple] = [(4, 8)],
     ):
         """The robotic warehouse environment
 
@@ -306,6 +320,10 @@ class Warehouse(gym.Env):
         self.max_inactivity_steps: Optional[int] = max_inactivity_steps
         self.reward_type = reward_type
         self.reward_range = (0, 1)
+
+        self.people_starts = people_starts
+        self.people_move_types = people_move_types
+        self.rec_sizes = rec_sizes
 
         self._cur_inactive_steps = None
         self._cur_steps = 0
@@ -756,15 +774,31 @@ class Warehouse(gym.Env):
         self.agents = [Agent(x, y, dir_, self.msg_bits) for y, x, dir_ in zip(*agent_locs, agent_dirs)]
 
         # make people obstacles
+        people_locs, people_dirs = ([], [])
+        steps = [0] * self.n_people
         agent_locs_set = set(zip(agent_locs[1], agent_locs[0]))
-        people_locs = []
-        # Keep choosing random locations until all are valid
-        while len(people_locs) < self.n_people:
-            loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
-            if self._is_highway(loc[0], loc[1]) and loc not in agent_locs_set:
-                people_locs.append(loc)
-        people_dirs = np.random.choice([d for d in Direction], size=self.n_people)
-        self.people = [Person(x, y, dir_) for (x, y), dir_ in zip(people_locs, people_dirs)]
+        if self.people_starts and self.n_people > 0:
+            people_locs = self.people_starts.copy()
+            while True:
+                if people_locs[0] in agent_locs_set:
+                    people_locs[0] = (people_locs[0][0] + 1, people_locs[0][1])
+                    steps[0] += 1
+                else:
+                    break
+            people_dirs = [Direction.RIGHT for _ in range(self.n_people)]
+        else:
+            # Keep choosing random locations until all are valid
+            while len(people_locs) < self.n_people:
+                loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
+                if self._is_highway(loc[0], loc[1]) and loc not in agent_locs_set:
+                    people_locs.append(loc)
+            people_dirs = np.random.choice([d for d in Direction], size=self.n_people)
+        self.people = [
+            Person(x, y, dir_, mt, size, step)
+            for (x, y), dir_, mt, size, step in zip(
+                people_locs, people_dirs, self.people_move_types, self.rec_sizes, steps
+            )
+        ]
 
         self._recalc_grid()
 
@@ -777,7 +811,6 @@ class Warehouse(gym.Env):
 
     def step(self, actions: List[Action]) -> Tuple[List[np.ndarray], List[float], List[bool], Dict]:
         assert len(actions) == len(self.agents)
-        # TODO: punish for close calls with people
         for agent, action in zip(self.agents, actions):
             if self.msg_bits > 0:
                 agent.req_action = Action(action[0])
@@ -788,7 +821,12 @@ class Warehouse(gym.Env):
         for person in self.people:
             if person.move_type == MoveType.RANDOM:
                 person.req_action = np.random.choice(list(PersonAction))
-            # TODO: implement other move types
+            elif person.move_type == MoveType.RECTANGLE:
+                rec_side = 0 if person.dir == Direction.RIGHT or person.dir == Direction.LEFT else 1
+                if person.steps == person.rec_size[rec_side] - 1:
+                    person.req_action = PersonAction.RIGHT
+                else:
+                    person.req_action = PersonAction.FORWARD
             else:
                 person.req_action = PersonAction.NOOP
 
@@ -879,8 +917,12 @@ class Warehouse(gym.Env):
 
             if person.req_action == PersonAction.FORWARD:
                 person.x, person.y = person.req_location(self.grid_size)
+                if person.move_type == MoveType.RECTANGLE:
+                    person.steps += 1
             elif person.req_action in [PersonAction.LEFT, PersonAction.RIGHT]:
                 person.dir = person.req_direction()
+                if person.move_type == MoveType.RECTANGLE:
+                    person.steps = 0
 
         rewards = np.zeros(self.n_agents)
 
@@ -907,6 +949,32 @@ class Warehouse(gym.Env):
                     agent.has_delivered = False
 
         self._recalc_grid()
+
+        # Check for proximity to person
+        person_range = 1
+        for agent in self.agents:
+            min_x = agent.x - person_range
+            max_x = agent.x + person_range + 1
+            min_y = agent.y - person_range
+            max_y = agent.y + person_range + 1
+            if (min_x < 0) or (min_y < 0) or (max_x > self.grid_size[1]) or (max_y > self.grid_size[0]):
+                padded_agents = np.pad(self.grid[_LAYER_AGENTS], person_range, mode="constant")
+                # + person_range due to padding
+                min_x += person_range
+                max_x += person_range
+                min_y += person_range
+                max_y += person_range
+            else:
+                padded_agents = self.grid[_LAYER_AGENTS]
+
+            adjacent_agents = padded_agents[min_y:max_y, min_x:max_x].reshape(-1)
+
+            if any(adjacent_agents < 0) and self.reward_type == RewardType.GLOBAL:
+                rewards -= 0.1
+            elif any(adjacent_agents < 0) and (
+                self.reward_type == RewardType.INDIVIDUAL or self.reward_type == RewardType.TWO_STAGE
+            ):
+                rewards[agent.id - 1] -= 0.1
 
         # Check for deliveries and reward agents
         shelf_delivered = False
