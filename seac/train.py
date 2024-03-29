@@ -8,7 +8,6 @@ from os import path
 from pathlib import Path
 
 import numpy as np
-import rware  # noqa
 import torch
 from a2c import A2C, algorithm
 from envs import make_vec_envs
@@ -23,6 +22,7 @@ from sacred.observers import (  # noqa
 from torch.utils.tensorboard import SummaryWriter
 from wrappers import RecordEpisodeStatistics, SquashDones
 
+import rware  # noqa
 import utils
 
 ex = Experiment(ingredients=[algorithm])
@@ -51,11 +51,14 @@ def config():
     eval_dir = "./results/video/{id}"
     loss_dir = "./results/loss/{id}"
     save_dir = "./results/trained_models/{id}"
+    models_dir = "./models/model_no_people"
 
     log_interval = 2000
     save_interval = int(1e6)
     eval_interval = int(1e6)
     episodes_per_eval = 8
+
+    transfer = False
 
 
 for conf in glob.glob("configs/*.yaml"):
@@ -146,9 +149,11 @@ def main(
     save_dir,
     eval_dir,
     loss_dir,
+    models_dir,
     log_interval,
     save_interval,
     eval_interval,
+    transfer,
 ):
 
     if loss_dir:
@@ -176,6 +181,20 @@ def main(
     )
 
     agents = [A2C(i, osp, asp) for i, (osp, asp) in enumerate(zip(envs.observation_space, envs.action_space))]
+    if transfer:
+        # Get model filepaths
+        models_pt = []
+        for folder in os.listdir(models_dir):
+            folder_path = os.path.join(models_dir, folder)
+            if not os.path.isdir(folder_path):
+                continue
+            models_pt.append(folder_path)
+
+        assert len(models_pt) == len(agents)
+
+        for agent, p in zip(agents, models_pt):
+            agent.restore(p)
+
     obs = envs.reset()
 
     for i in range(len(obs)):
