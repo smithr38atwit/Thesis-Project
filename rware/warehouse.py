@@ -835,6 +835,8 @@ class Warehouse(gym.Env):
 
         G = nx.DiGraph()
 
+        rewards = np.zeros(self.n_agents)
+
         # Populate graph with possible moves for agents
         for agent in self.agents:
             start = agent.x, agent.y
@@ -902,6 +904,13 @@ class Warehouse(gym.Env):
 
         for agent in failed_agents:
             assert agent.req_action == Action.FORWARD
+            new_x, new_y = agent.req_location(self.grid_size)
+            # if agent is a robot and new location contains a person, penalize
+            if agent.id > 0 and self.grid[_LAYER_AGENTS, new_y, new_x] < 0:
+                if self.reward_type == RewardType.GLOBAL:
+                    rewards -= 0.5
+                elif self.reward_type == RewardType.INDIVIDUAL or self.reward_type == RewardType.TWO_STAGE:
+                    rewards[agent.id - 1] -= 0.5
             agent.req_action = Action.NOOP
 
         commited_people = set([self.people[-1 * id_ - 1] for id_ in commited_people])
@@ -923,8 +932,6 @@ class Warehouse(gym.Env):
                 person.dir = person.req_direction()
                 if person.move_type == MoveType.RECTANGLE:
                     person.steps = 0
-
-        rewards = np.zeros(self.n_agents)
 
         # Perform actions for each agent
         for agent in self.agents:
@@ -951,6 +958,7 @@ class Warehouse(gym.Env):
         self._recalc_grid()
 
         # Check for proximity to person
+        """
         person_range = 1
         for agent in self.agents:
             min_x = agent.x - person_range
@@ -970,11 +978,12 @@ class Warehouse(gym.Env):
             adjacent_agents = padded_agents[min_y:max_y, min_x:max_x].reshape(-1)
 
             if any(adjacent_agents < 0) and self.reward_type == RewardType.GLOBAL:
-                rewards -= 0.1
+                rewards -= 0.05
             elif any(adjacent_agents < 0) and (
                 self.reward_type == RewardType.INDIVIDUAL or self.reward_type == RewardType.TWO_STAGE
             ):
-                rewards[agent.id - 1] -= 0.1
+                rewards[agent.id - 1] -= 0.05
+        """
 
         # Check for deliveries and reward agents
         shelf_delivered = False
