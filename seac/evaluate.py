@@ -1,11 +1,13 @@
 import gym
-import rware
 import torch
 from a2c import A2C
 from wrappers import Monitor, RecordEpisodeStatistics, TimeLimit
 
-path = "seac/pretrained/rware-small-4ag"
-env_name = "rware-small-4ag-v1"
+import rware
+
+model_name = "model_no_people"
+path = f"/home/lambda10/rsmith_thesis/Thesis-Project/models/{model_name}"
+env_name = "rware-tiny-2ag-v1"
 time_limit = 500  # 25 for LBF
 
 EPISODES = 5
@@ -20,7 +22,7 @@ for agent in agents:
 
 for ep in range(EPISODES):
     env = gym.make(env_name)
-    env = Monitor(env, f"seac_rware-small-4ag_eval/video_ep{ep+1}", mode="evaluation")
+    env = Monitor(env, f"videos/{model_name}/video_ep{ep+1}", mode="evaluation")
     env = TimeLimit(env, time_limit)
     env = RecordEpisodeStatistics(env)
 
