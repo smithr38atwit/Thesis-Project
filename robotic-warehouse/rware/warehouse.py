@@ -836,6 +836,7 @@ class Warehouse(gym.Env):
         G = nx.DiGraph()
 
         rewards = np.zeros(self.n_agents)
+        info = {f"agent{i}/collisions": 0 for i in range(self.n_agents)}
 
         # Populate graph with possible moves for agents
         for agent in self.agents:
@@ -907,6 +908,7 @@ class Warehouse(gym.Env):
             new_x, new_y = agent.req_location(self.grid_size)
             # if agent is a robot and new location contains a person, penalize
             if agent.id > 0 and self.grid[_LAYER_AGENTS, new_y, new_x] < 0:
+                info[f"agent{agent.id-1}/collisions"] += 1
                 if self.reward_type == RewardType.GLOBAL:
                     rewards -= 0.5
                 elif self.reward_type == RewardType.INDIVIDUAL or self.reward_type == RewardType.TWO_STAGE:
@@ -1025,7 +1027,6 @@ class Warehouse(gym.Env):
             dones = self.n_agents * [False]
 
         new_obs = tuple([self._make_obs(agent) for agent in self.agents])
-        info = {}
         return new_obs, list(rewards), dones, info
 
     def render(self, mode="human"):
