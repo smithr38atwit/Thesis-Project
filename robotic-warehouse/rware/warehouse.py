@@ -226,7 +226,7 @@ class Warehouse(gym.Env):
         max_inactivity_steps: Optional[int],
         max_steps: Optional[int],
         reward_type: RewardType,
-        n_people: int = 1,
+        n_people: int = 4,
         layout: str = None,
         observation_type: ObserationType = ObserationType.FLATTENED,
         image_observation_layers: List[ImageLayer] = [
@@ -238,7 +238,9 @@ class Warehouse(gym.Env):
         ],
         image_observation_directional: bool = True,
         normalised_coordinates: bool = False,
-        people_starts: Optional[List] = [(3, 1)],  # (x, y)
+        people_starts: Optional[List] = [(3, 1), (6, 3), (6, 8), (3, 6)],  # (x, y)
+        people_dirs: Optional[List] = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP],
+        people_steps: Optional[List] = [0, 2, 0, 2],
         people_move_types: List[MoveType] = [MoveType.RECTANGLE],
         rec_sizes: List[Tuple] = [(4, 8)],
     ):
@@ -322,6 +324,8 @@ class Warehouse(gym.Env):
         self.reward_range = (0, 1)
 
         self.people_starts = people_starts
+        self.people_dirs = people_dirs
+        self.people_steps = people_steps
         self.people_move_types = people_move_types
         self.rec_sizes = rec_sizes
 
@@ -763,6 +767,7 @@ class Warehouse(gym.Env):
         ]
 
         # spawn agents at random locations
+        """
         agent_locs = np.random.choice(
             np.arange(self.grid_size[0] * self.grid_size[1]),
             size=self.n_agents,
@@ -772,25 +777,27 @@ class Warehouse(gym.Env):
         # and direction
         agent_dirs = np.random.choice([d for d in Direction], size=self.n_agents)
         self.agents = [Agent(x, y, dir_, self.msg_bits) for y, x, dir_ in zip(*agent_locs, agent_dirs)]
+        """
 
         # make people obstacles
         people_locs, people_dirs = ([], [])
         steps = [0] * self.n_people
-        agent_locs_set = set(zip(agent_locs[1], agent_locs[0]))
+        # agent_locs_set = set(zip(agent_locs[1], agent_locs[0]))
         if self.people_starts and self.n_people > 0:
             people_locs = self.people_starts.copy()
-            while True:
-                if people_locs[0] in agent_locs_set:
-                    people_locs[0] = (people_locs[0][0] + 1, people_locs[0][1])
-                    steps[0] += 1
-                else:
-                    break
-            people_dirs = [Direction.RIGHT for _ in range(self.n_people)]
+            steps = self.people_steps
+            # while True:
+            #     if people_locs[0] in agent_locs_set:
+            #         people_locs[0] = (people_locs[0][0] + 1, people_locs[0][1])
+            #         steps[0] += 1
+            #     else:
+            #         break
+            people_dirs = self.people_dirs
         else:
             # Keep choosing random locations until all are valid
             while len(people_locs) < self.n_people:
                 loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
-                if self._is_highway(loc[0], loc[1]) and loc not in agent_locs_set:
+                if self._is_highway(loc[0], loc[1]):  # and loc not in agent_locs_set:
                     people_locs.append(loc)
             people_dirs = np.random.choice([d for d in Direction], size=self.n_people)
         self.people = [
@@ -799,6 +806,15 @@ class Warehouse(gym.Env):
                 people_locs, people_dirs, self.people_move_types, self.rec_sizes, steps
             )
         ]
+
+        agent_locs = []
+        people_locs_set = set(zip(people_locs[1], people_locs[0]))
+        while len(agent_locs) < self.n_agents:
+            loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
+            if loc not in people_locs_set:
+                agent_locs.append(loc)
+        agent_dirs = np.random.choice([d for d in Direction], size=self.n_agents)
+        self.agents = [Agent(x, y, dir_, self.msg_bits) for y, x, dir_ in zip(*agent_locs, agent_dirs)]
 
         self._recalc_grid()
 
