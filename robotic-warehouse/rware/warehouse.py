@@ -326,8 +326,8 @@ class Warehouse(gym.Env):
         self.people_starts = people_starts
         self.people_dirs = people_dirs
         self.people_steps = people_steps
-        self.people_move_types = people_move_types
-        self.rec_sizes = rec_sizes
+        self.people_move_types = people_move_types * self.n_people
+        self.rec_sizes = rec_sizes * self.n_people
 
         self._cur_inactive_steps = None
         self._cur_steps = 0
@@ -808,13 +808,13 @@ class Warehouse(gym.Env):
         ]
 
         agent_locs = []
-        people_locs_set = set(zip(people_locs[1], people_locs[0]))
+        people_locs_set = set(people_locs)
         while len(agent_locs) < self.n_agents:
             loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
             if loc not in people_locs_set:
                 agent_locs.append(loc)
         agent_dirs = np.random.choice([d for d in Direction], size=self.n_agents)
-        self.agents = [Agent(x, y, dir_, self.msg_bits) for y, x, dir_ in zip(*agent_locs, agent_dirs)]
+        self.agents = [Agent(x, y, dir_, self.msg_bits) for (x, y), dir_ in zip(agent_locs, agent_dirs)]
 
         self._recalc_grid()
 
