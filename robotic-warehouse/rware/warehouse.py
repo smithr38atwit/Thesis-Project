@@ -226,7 +226,7 @@ class Warehouse(gym.Env):
         max_inactivity_steps: Optional[int],
         max_steps: Optional[int],
         reward_type: RewardType,
-        n_people: int = 4,
+        n_people: int = 0,
         layout: str = None,
         observation_type: ObserationType = ObserationType.FLATTENED,
         image_observation_layers: List[ImageLayer] = [
@@ -238,9 +238,9 @@ class Warehouse(gym.Env):
         ],
         image_observation_directional: bool = True,
         normalised_coordinates: bool = False,
-        people_starts: Optional[List] = [(3, 1), (6, 3), (6, 8), (3, 6)],  # (x, y)
-        people_dirs: Optional[List] = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP],
-        people_steps: Optional[List] = [0, 2, 0, 2],
+        people_starts: Optional[List] = [(3, 1)],  # (6, 3), (6, 8), (3, 6)],  # (x, y)
+        people_dirs: Optional[List] = [Direction.RIGHT],  # Direction.DOWN, Direction.LEFT, Direction.UP],
+        people_steps: Optional[List] = [0],  # 2, 0, 2],
         people_move_types: List[MoveType] = [MoveType.RECTANGLE],
         rec_sizes: List[Tuple] = [(4, 8)],
     ):
@@ -811,7 +811,7 @@ class Warehouse(gym.Env):
         people_locs_set = set(people_locs)
         while len(agent_locs) < self.n_agents:
             loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
-            if loc not in people_locs_set:
+            if loc not in people_locs_set and loc not in agent_locs:
                 agent_locs.append(loc)
         agent_dirs = np.random.choice([d for d in Direction], size=self.n_agents)
         self.agents = [Agent(x, y, dir_, self.msg_bits) for (x, y), dir_ in zip(agent_locs, agent_dirs)]
