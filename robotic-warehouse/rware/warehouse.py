@@ -226,7 +226,7 @@ class Warehouse(gym.Env):
         max_inactivity_steps: Optional[int],
         max_steps: Optional[int],
         reward_type: RewardType,
-        n_people: int = 0,
+        n_people: int = 1,
         layout: str = None,
         observation_type: ObserationType = ObserationType.FLATTENED,
         image_observation_layers: List[ImageLayer] = [
@@ -238,9 +238,9 @@ class Warehouse(gym.Env):
         ],
         image_observation_directional: bool = True,
         normalised_coordinates: bool = False,
-        people_starts: Optional[List] = [(3, 1)],  # (6, 3), (6, 8), (3, 6)],  # (x, y)
-        people_dirs: Optional[List] = [Direction.RIGHT],  # Direction.DOWN, Direction.LEFT, Direction.UP],
-        people_steps: Optional[List] = [0],  # 2, 0, 2],
+        people_starts: Optional[List] = [(3, 1), (6, 3), (6, 8), (3, 6)],  # (x, y)
+        people_dirs: Optional[List] = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP],
+        people_steps: Optional[List] = [0, 2, 0, 2],
         people_move_types: List[MoveType] = [MoveType.RECTANGLE],
         rec_sizes: List[Tuple] = [(4, 8)],
     ):
@@ -323,9 +323,13 @@ class Warehouse(gym.Env):
         self.reward_type = reward_type
         self.reward_range = (0, 1)
 
-        self.people_starts = people_starts
-        self.people_dirs = people_dirs
-        self.people_steps = people_steps
+        self.people_starts = people_starts[:n_people]
+        # Account for increased col height (but not row length)
+        if self.grid_size[0] > 11:
+            for i, start in enumerate(self.people_starts):
+                self.people_starts[i] = (start[0], start[1] + self.grid_size[0] - 11)
+        self.people_dirs = people_dirs[:n_people]
+        self.people_steps = people_steps[:n_people]
         self.people_move_types = people_move_types * self.n_people
         self.rec_sizes = rec_sizes * self.n_people
 
