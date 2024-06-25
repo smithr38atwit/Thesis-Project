@@ -856,7 +856,10 @@ class Warehouse(gym.Env):
         G = nx.DiGraph()
 
         rewards = np.zeros(self.n_agents)
-        info = {f"agent{i}/collisions": 0 for i in range(self.n_agents)}
+        info = {}
+        for i in range(self.n_agents):
+            info[f"agent{i}/collisions"] = 0
+            info[f"agent{i}/deliveries"] = 0
 
         # Populate graph with possible moves for agents
         for agent in self.agents:
@@ -1023,15 +1026,17 @@ class Warehouse(gym.Env):
             new_request = np.random.choice(list(set(self.shelfs) - set(self.request_queue)))
             self.request_queue[self.request_queue.index(shelf)] = new_request
             # also reward the agents
+            agent_id = self.grid[_LAYER_AGENTS, x, y]
             if self.reward_type == RewardType.GLOBAL:
                 rewards += 1
             elif self.reward_type == RewardType.INDIVIDUAL:
-                agent_id = self.grid[_LAYER_AGENTS, x, y]
                 rewards[agent_id - 1] += 1
             elif self.reward_type == RewardType.TWO_STAGE:
-                agent_id = self.grid[_LAYER_AGENTS, x, y]
                 self.agents[agent_id - 1].has_delivered = True
                 rewards[agent_id - 1] += 0.5
+
+            # track deliveries
+            info[f"agent{agent_id-1}/deliveries"] += 1
 
         if shelf_delivered:
             self._cur_inactive_steps = 0
@@ -1053,7 +1058,7 @@ class Warehouse(gym.Env):
         if not self.renderer:
             from rware.rendering import Viewer
 
-            self.renderer = Viewer(self.grid_size)
+            self.renderer = Viewer(self.grid_size, mode)
         return self.renderer.render(self, return_rgb_array=mode == "rgb_array")
 
     def close(self):

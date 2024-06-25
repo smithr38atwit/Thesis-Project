@@ -20,6 +20,7 @@ class RecordEpisodeStatistics(gym.Wrapper):
         self.reward_queue = deque(maxlen=deque_size)
         self.length_queue = deque(maxlen=deque_size)
         self.collisions = np.zeros(self.n_agents)
+        self.deliveries = np.zeros(self.n_agents)
 
     def reset(self, **kwargs):
         observation = super().reset(**kwargs)
@@ -35,13 +36,16 @@ class RecordEpisodeStatistics(gym.Wrapper):
         self.episode_length += 1
         for i in range(self.n_agents):
             self.collisions[i] += info[f"agent{i}/collisions"]
+            self.deliveries[i] += info[f"agent{i}/deliveries"]
         if all(done):
             info = {}
             info["episode_reward"] = self.episode_reward
             info["collisions"] = self.collisions
+            info["deliveries"] = self.deliveries
             for i, agent_reward in enumerate(self.episode_reward):
                 info[f"agent{i}/episode_reward"] = agent_reward
                 info[f"agent{i}/collisions"] = self.collisions[i]
+                info[f"agent{i}/deliveries"] = self.deliveries[i]
             info["episode_length"] = self.episode_length
             info["episode_time"] = perf_counter() - self.t0
 
