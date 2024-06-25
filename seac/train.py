@@ -8,6 +8,7 @@ from os import path
 from pathlib import Path
 
 import numpy as np
+import rware  # noqa
 import torch
 from a2c import A2C, algorithm
 from envs import make_vec_envs
@@ -22,7 +23,6 @@ from sacred.observers import (  # noqa
 from torch.utils.tensorboard import SummaryWriter
 from wrappers import RecordEpisodeStatistics, SquashDones
 
-import rware  # noqa
 import utils
 
 ex = Experiment(ingredients=[algorithm])
@@ -51,7 +51,7 @@ def config():
     eval_dir = "./results/video/{id}"
     loss_dir = "./results/loss/{id}"
     save_dir = "./results/trained_models/{id}"
-    models_dir = "./models/model_no_people"
+    models_dir = "./models/seac/base_20m_small_4ag"
 
     log_interval = 2000
     save_interval = int(1e6)
