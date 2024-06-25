@@ -10,7 +10,6 @@ import sys
 import numpy as np
 import six
 from gym import error
-
 from rware.warehouse import Direction
 
 if "Apple" in sys.version:
@@ -81,16 +80,38 @@ def get_display(spec):
 
 
 class Viewer(object):
-    def __init__(self, world_size):
-        display = get_display(None)
-        self.rows, self.cols = world_size
+    def __init__(self, world_size, mode):
+        # if mode == "rgb_array":
+        #     pyglet.options["headless"] = True
 
+        # display = get_display(None)
+        # self.rows, self.cols = world_size
+
+        # self.grid_size = 30
+        # self.icon_size = 20
+
+        # self.width = 1 + self.cols * (self.grid_size + 1)
+        # self.height = 1 + self.rows * (self.grid_size + 1)
+        # self.window = pyglet.window.Window(width=self.width, height=self.height, display=display)
+        # self.window.on_close = self.window_closed_by_user
+        # self.isopen = True
+        if mode == "rgb_array":
+            pyglet.options["headless"] = True
+            display = pyglet.canvas.get_display()
+            screen = display.get_default_screen()
+            config = screen.get_best_config()
+            context = config.create_context(None)
+            self.window = pyglet.window.Window(width=1, height=1, config=config, context=context, visible=False)
+        else:
+            display = get_display(None)
+            self.window = pyglet.window.Window(width=1, height=1, display=display)
+
+        self.rows, self.cols = world_size
         self.grid_size = 30
         self.icon_size = 20
-
         self.width = 1 + self.cols * (self.grid_size + 1)
         self.height = 1 + self.rows * (self.grid_size + 1)
-        self.window = pyglet.window.Window(width=self.width, height=self.height, display=display)
+        self.window.set_size(self.width, self.height)
         self.window.on_close = self.window_closed_by_user
         self.isopen = True
 
