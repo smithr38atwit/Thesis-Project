@@ -3,6 +3,7 @@ import numpy as np
 import rware
 import torch
 from a2c import A2C
+from sheets.sheets import update_values
 from wrappers import Monitor, RecordEpisodeStatistics, TimeLimit
 
 from utils import save_animation
@@ -12,9 +13,10 @@ path = f"/home/lambda10/rsmith_thesis/Thesis-Project/models/{model_name}"
 env_name = "rware-tiny-2ag-v1"
 time_limit = 500  # 25 for LBF
 
+GSHEET_ROW = 4
 EPISODES = 1000
 RECORD = False
-RECORD_OUTLIERS = True
+RECORD_OUTLIERS = False
 STATS = False
 
 env = gym.make(env_name)
@@ -31,7 +33,7 @@ all_deliveries = []
 max_r, max_c, max_d = (-np.inf,) * 3
 min_r, min_c, min_d = (np.inf,) * 3
 for ep in range(EPISODES):
-    print("Episode: " + str(ep + 1), end="\r")
+    print(f"Episode: {ep + 1} / {EPISODES}", end="\r")
 
     env = gym.make(env_name)
     if RECORD:
@@ -90,6 +92,22 @@ for ep in range(EPISODES):
     if RECORD_OUTLIERS and total_reward < 0:
         save_animation(frames, f"videos/test/{model_name}_wp/video_ep{ep+1}")
 
+update_values(
+    [
+        [
+            min(all_rewards),
+            max(all_rewards),
+            sum(all_rewards) / EPISODES,
+            min(all_collisions),
+            max(all_collisions),
+            sum(all_collisions) / EPISODES,
+            min(all_deliveries),
+            max(all_deliveries),
+            sum(all_deliveries) / EPISODES,
+        ]
+    ],
+    3,
+)
 print(f"--- Averages Over {EPISODES} Episodes ---")
 print(f"Average rewards: {sum(all_rewards) / EPISODES} | Min: {min(all_rewards)} | Max: {max(all_rewards)}")
 print(f"Average collisions: {sum(all_collisions) / EPISODES} | Min: {min(all_collisions)} | Max: {max(all_collisions)}")
