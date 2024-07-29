@@ -1,9 +1,10 @@
-from envs import REGISTRY as env_REGISTRY
 from functools import partial
-from components.episode_buffer import EpisodeBatch
 from multiprocessing import Pipe, Process
+
 import numpy as np
 import torch as th
+from components.episode_buffer import EpisodeBatch
+from envs import REGISTRY as env_REGISTRY
 
 
 # Based (very) heavily on SubprocVecEnv from OpenAI Baselines
@@ -22,8 +23,10 @@ class ParallelRunner:
         for i in range(self.batch_size):
             env_args[i]["seed"] += i
 
-        self.ps = [Process(target=env_worker, args=(worker_conn, CloudpickleWrapper(partial(env_fn, **env_arg))))
-                            for env_arg, worker_conn in zip(env_args, self.worker_conns)]
+        self.ps = [
+            Process(target=env_worker, args=(worker_conn, CloudpickleWrapper(partial(env_fn, **env_arg))))
+            for env_arg, worker_conn in zip(env_args, self.worker_conns)
+        ]
 
         for p in self.ps:
             p.daemon = True
@@ -45,8 +48,15 @@ class ParallelRunner:
         self.log_train_stats_t = -100000
 
     def setup(self, scheme, groups, preprocess, mac):
-        self.new_batch = partial(EpisodeBatch, scheme, groups, self.batch_size, self.episode_limit + 1,
-                                 preprocess=preprocess, device=self.args.device)
+        self.new_batch = partial(
+            EpisodeBatch,
+            scheme,
+            groups,
+            self.batch_size,
+            self.episode_limit + 1,
+            preprocess=preprocess,
+            device=self.args.device,
+        )
         self.mac = mac
         self.scheme = scheme
         self.groups = groups
@@ -69,11 +79,7 @@ class ParallelRunner:
         for parent_conn in self.parent_conns:
             parent_conn.send(("reset", None))
 
-        pre_transition_data = {
-            "state": [],
-            "avail_actions": [],
-            "obs": []
-        }
+        pre_transition_data = {"state": [], "avail_actions": [], "obs": []}
         # Get the obs, state and avail_actions back
         for parent_conn in self.parent_conns:
             data = parent_conn.recv()
@@ -101,22 +107,22 @@ class ParallelRunner:
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch for each un-terminated env
-            actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated, test_mode=test_mode)
+            actions = self.mac.select_actions(
+                self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated, test_mode=test_mode
+            )
             cpu_actions = actions.to("cpu").numpy()
 
             # Update the actions taken
-            actions_chosen = {
-                "actions": actions.unsqueeze(1)
-            }
+            actions_chosen = {"actions": actions.unsqueeze(1)}
             self.batch.update(actions_chosen, bs=envs_not_terminated, ts=self.t, mark_filled=False)
 
             # Send actions to each env
             action_idx = 0
             for idx, parent_conn in enumerate(self.parent_conns):
-                if idx in envs_not_terminated: # We produced actions for this env
-                    if not terminated[idx]: # Only send the actions to the env if it hasn't terminated
+                if idx in envs_not_terminated:  # We produced actions for this env
+                    if not terminated[idx]:  # Only send the actions to the env if it hasn't terminated
                         parent_conn.send(("step", cpu_actions[action_idx]))
-                    action_idx += 1 # actions is not a list over every env
+                    action_idx += 1  # actions is not a list over every env
                     if idx == 0 and test_mode and self.args.render:
                         parent_conn.send(("render", None))
 
@@ -127,16 +133,9 @@ class ParallelRunner:
                 break
 
             # Post step data we will insert for the current timestep
-            post_transition_data = {
-                "reward": [],
-                "terminated": []
-            }
+            post_transition_data = {"reward": [], "terminated": []}
             # Data for the next step we will insert in order to select an action
-            pre_transition_data = {
-                "state": [],
-                "avail_actions": [],
-                "obs": []
-            }
+            pre_transition_data = {"state": [], "avail_actions": [], "obs": []}
 
             # Receive data back for each unterminated env
             for idx, parent_conn in enumerate(self.parent_conns):
@@ -177,7 +176,7 @@ class ParallelRunner:
 
         # Get stats back for each env
         for parent_conn in self.parent_conns:
-            parent_conn.send(("get_stats",None))
+            parent_conn.send(("get_stats", None))
 
         env_stats = []
         for parent_conn in self.parent_conns:
@@ -212,7 +211,7 @@ class ParallelRunner:
 
         for k, v in stats.items():
             if k != "n_episodes":
-                self.logger.log_stat(prefix + k + "_mean" , v/stats["n_episodes"], self.t_env)
+                self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
         stats.clear()
 
 
@@ -229,23 +228,21 @@ def env_worker(remote, env_fn):
             state = env.get_state()
             avail_actions = env.get_avail_actions()
             obs = env.get_obs()
-            remote.send({
-                # Data for the next timestep needed to pick an action
-                "state": state,
-                "avail_actions": avail_actions,
-                "obs": obs,
-                # Rest of the data for the current timestep
-                "reward": reward,
-                "terminated": terminated,
-                "info": env_info
-            })
+            remote.send(
+                {
+                    # Data for the next timestep needed to pick an action
+                    "state": state,
+                    "avail_actions": avail_actions,
+                    "obs": obs,
+                    # Rest of the data for the current timestep
+                    "reward": reward,
+                    "terminated": terminated,
+                    "info": env_info,
+                }
+            )
         elif cmd == "reset":
             env.reset()
-            remote.send({
-                "state": env.get_state(),
-                "avail_actions": env.get_avail_actions(),
-                "obs": env.get_obs()
-            })
+            remote.send({"state": env.get_state(), "avail_actions": env.get_avail_actions(), "obs": env.get_obs()})
         elif cmd == "close":
             env.close()
             remote.close()
@@ -262,16 +259,20 @@ def env_worker(remote, env_fn):
             raise NotImplementedError
 
 
-class CloudpickleWrapper():
+class CloudpickleWrapper:
     """
     Uses cloudpickle to serialize contents (otherwise multiprocessing tries to use pickle)
     """
+
     def __init__(self, x):
         self.x = x
+
     def __getstate__(self):
         import cloudpickle
+
         return cloudpickle.dumps(self.x)
+
     def __setstate__(self, ob):
         import pickle
-        self.x = pickle.loads(ob)
 
+        self.x = pickle.loads(ob)
