@@ -1,26 +1,26 @@
-from functools import partial
-import pretrained
-from smac.env import MultiAgentEnv, StarCraft2Env
-import sys
 import os
+import sys
+from functools import partial
+
 import gym
+import numpy as np
+import pretrained
 from gym import ObservationWrapper, spaces
 from gym.envs import registry as gym_registry
 from gym.spaces import flatdim
-import numpy as np
 from gym.wrappers import TimeLimit as GymTimeLimit
+from smac.env import MultiAgentEnv
+
 
 def env_fn(env, **kwargs) -> MultiAgentEnv:
     return env(**kwargs)
 
 
 REGISTRY = {}
-REGISTRY["sc2"] = partial(env_fn, env=StarCraft2Env)
+# REGISTRY["sc2"] = partial(env_fn, env=StarCraft2Env)
 
 if sys.platform == "linux":
-    os.environ.setdefault(
-        "SC2PATH", os.path.join(os.getcwd(), "3rdparty", "StarCraftII")
-    )
+    os.environ.setdefault("SC2PATH", os.path.join(os.getcwd(), "3rdparty", "StarCraftII"))
 
 
 class TimeLimit(GymTimeLimit):
@@ -34,15 +34,11 @@ class TimeLimit(GymTimeLimit):
         self._elapsed_steps = None
 
     def step(self, action):
-        assert (
-            self._elapsed_steps is not None
-        ), "Cannot call env.step() before calling reset()"
+        assert self._elapsed_steps is not None, "Cannot call env.step() before calling reset()"
         observation, reward, done, info = self.env.step(action)
         self._elapsed_steps += 1
         if self._elapsed_steps >= self._max_episode_steps:
-            info["TimeLimit.truncated"] = not all(done) \
-                if type(done) is list \
-                else not done
+            info["TimeLimit.truncated"] = not all(done) if type(done) is list else not done
             done = len(observation) * [True]
         return observation, reward, done, info
 
@@ -70,10 +66,7 @@ class FlattenObservation(ObservationWrapper):
 
     def observation(self, observation):
         return tuple(
-            [
-                spaces.flatten(obs_space, obs)
-                for obs_space, obs in zip(self.env.observation_space, observation)
-            ]
+            [spaces.flatten(obs_space, obs) for obs_space, obs in zip(self.env.observation_space, observation)]
         )
 
 
@@ -92,15 +85,13 @@ class _GymmaWrapper(MultiAgentEnv):
         self._info = None
 
         self.longest_action_space = max(self._env.action_space, key=lambda x: x.n)
-        self.longest_observation_space = max(
-            self._env.observation_space, key=lambda x: x.shape
-        )
+        self.longest_observation_space = max(self._env.observation_space, key=lambda x: x.shape)
 
         self._seed = seed
         self._env.seed(self._seed)
 
     def step(self, actions):
-        """ Returns reward, terminated, info """
+        """Returns reward, terminated, info"""
         actions = [int(a) for a in actions]
         self._obs, reward, done, self._info = self._env.step(actions)
         self._obs = [
@@ -120,23 +111,23 @@ class _GymmaWrapper(MultiAgentEnv):
         return float(reward), done, {}
 
     def get_obs(self):
-        """ Returns all agent observations in a list """
+        """Returns all agent observations in a list"""
         return self._obs
 
     def get_obs_agent(self, agent_id):
-        """ Returns observation for agent_id """
+        """Returns observation for agent_id"""
         raise self._obs[agent_id]
 
     def get_obs_size(self):
-        """ Returns the shape of the observation """
+        """Returns the shape of the observation"""
         return flatdim(self.longest_observation_space)
 
     def get_state(self):
         return np.concatenate(self._obs, axis=0).astype(np.float32)
 
     def get_state_size(self):
-        """ Returns the shape of the state"""
-        if hasattr(self.original_env, 'state_size'):
+        """Returns the shape of the state"""
+        if hasattr(self.original_env, "state_size"):
             return self.original_env.state_size
         return self.n_agents * flatdim(self.longest_observation_space)
 
@@ -148,18 +139,18 @@ class _GymmaWrapper(MultiAgentEnv):
         return avail_actions
 
     def get_avail_agent_actions(self, agent_id):
-        """ Returns the available actions for agent_id """
+        """Returns the available actions for agent_id"""
         valid = flatdim(self._env.action_space[agent_id]) * [1]
         invalid = [0] * (self.longest_action_space.n - len(valid))
         return valid + invalid
 
     def get_total_actions(self):
-        """ Returns the total number of actions an agent could ever take """
+        """Returns the total number of actions an agent could ever take"""
         # TODO: This is only suitable for a discrete 1 dimensional action space for each agent
         return flatdim(self.longest_action_space)
 
     def reset(self):
-        """ Returns initial observations and states"""
+        """Returns initial observations and states"""
         self._obs = self._env.reset()
         self._obs = [
             np.pad(

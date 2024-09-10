@@ -6,3 +6,7 @@ seac/rware
 seac/rware/
 videos
 *.egg-info
+
+# Google sheets API
+credentials.json
+token.json

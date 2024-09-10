@@ -10,7 +10,6 @@ import sys
 import numpy as np
 import six
 from gym import error
-
 from rware.warehouse import Direction
 
 if "Apple" in sys.version:
@@ -90,7 +89,7 @@ class Viewer(object):
 
         self.width = 1 + self.cols * (self.grid_size + 1)
         self.height = 1 + self.rows * (self.grid_size + 1)
-        self.window = pyglet.window.Window(width=self.width, height=self.height, display=display)
+        self.window = pyglet.window.Window(width=self.width, height=self.height, display=display, visible=False)
         self.window.on_close = self.window_closed_by_user
         self.isopen = True
 
