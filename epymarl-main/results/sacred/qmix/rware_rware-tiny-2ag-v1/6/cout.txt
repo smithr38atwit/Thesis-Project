@@ -1,0 +1,15 @@
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Episode return: 0.0
+Exiting Main
+Stopping all threads
+Thread Thread-19 is alive! Is daemon: False
+Thread joined
+Exiting script

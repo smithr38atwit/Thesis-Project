@@ -1,0 +1,5 @@
+Exiting Main
+Stopping all threads
+Thread Thread-19 is alive! Is daemon: False
+Thread joined
+Exiting script
