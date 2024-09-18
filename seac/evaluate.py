@@ -1,23 +1,28 @@
+# from sheets_api.sheets.sheets import update_values
+import json
+import os
+import sys
+
 import gym
 import numpy as np
 import rware
 import torch
 from a2c import A2C
-from sheets.sheets import update_values
-from wrappers import Monitor, RecordEpisodeStatistics, TimeLimit
+from wrappers import RecordEpisodeStatistics, TimeLimit
 
-from utils import save_animation
+sys.path.append("C:/Users/smithr38/Code/School/Thesis-Project/")
+from custom_utils.animations import save_animation
 
 model_name = "seac/tiny_2ag_1p_20m"
-path = f"/home/lambda10/rsmith_thesis/Thesis-Project/models/{model_name}"
+path = f"C:/Users/smithr38/Code/School/Thesis-Project/models/{model_name}"
 env_name = "rware-tiny-2ag-v1"
 time_limit = 500  # 25 for LBF
 
-GSHEET_ROW = 4
-EPISODES = 1000
-RECORD = False
+GSHEET_ROW = None
+EPISODES = 1
+RECORD = True
 RECORD_OUTLIERS = False
-STATS = False
+SAVE_STATS = True
 
 env = gym.make(env_name)
 agents = [
@@ -30,86 +35,149 @@ for agent in agents:
 all_rewards = []
 all_collisions = []
 all_deliveries = []
-max_r, max_c, max_d = (-np.inf,) * 3
-min_r, min_c, min_d = (np.inf,) * 3
+outliers = {}
+stats = {
+    "metadata": {
+        "model": model_name,
+        "env": env_name,
+        "time_limit": time_limit,
+        "num_episodes": EPISODES,
+    },
+    "averages": {},
+    "episodes": [],
+}
 for ep in range(EPISODES):
     print(f"Episode: {ep + 1} / {EPISODES}", end="\r")
 
     env = gym.make(env_name)
-    if RECORD:
-        env = Monitor(env, f"videos/test/{model_name}_wp/video_ep{ep+1}", mode="evaluation")
     env = TimeLimit(env, time_limit)
     env = RecordEpisodeStatistics(env)
-
+    seed = env.seed()[0]
     obs = env.reset()
     done = [False] * len(agents)
 
+    action_list = []
     frames = []
     while not all(done):
         obs = [torch.from_numpy(o) for o in obs]
         _, actions, _, _ = zip(*[agent.model.act(obs[agent.agent_id], None, None) for agent in agents])
         actions = [a.item() for a in actions]
+        if RECORD_OUTLIERS:
+            action_list.append(actions.copy())
         if RECORD:
-            env.render()
-        elif RECORD_OUTLIERS:
             frames.append(env.render(mode="rgb_array"))
         obs, _, done, info = env.step(actions)
     obs = env.reset()
     env.close()
 
-    episode_reward = info["episode_reward"]
-    collisions = info["collisions"]
-    deliveries = info["deliveries"]
-    total_reward = sum(episode_reward)
-    total_collisions = sum(collisions)
-    total_deliveries = sum(deliveries)
+    if RECORD:
+        # Create the directory if it doesn't exist
+        output_dir = f"C:/Users/smithr38/Code/School/Thesis-Project/videos/{model_name}"
+        os.makedirs(output_dir, exist_ok=True)
+
+        save_animation(frames, os.path.join(output_dir, f"ep{ep+1}.mp4"))
+
+    total_reward = sum(info["episode_reward"])
+    total_collisions = sum(info["collisions"])
+    total_deliveries = sum(info["deliveries"])
     all_rewards.append(total_reward)
     all_collisions.append(total_collisions)
     all_deliveries.append(total_deliveries)
-    # maxs and mins
-    if max(episode_reward) > max_r:
-        max_r = max(episode_reward)
-    elif min(episode_reward) < min_r:
-        min_r = min(episode_reward)
-    if max(collisions) > max_c:
-        max_c = max(collisions)
-    elif min(collisions) < min_c:
-        min_c = min(collisions)
-    if max(deliveries) > max_d:
-        max_d = max(deliveries)
-    elif min(deliveries) < min_d:
-        min_d = min(deliveries)
 
-    if STATS:
-        print("--- Episode Finished ---")
-        print(f"Episode rewards: {total_reward} | Min: {min(episode_reward)} | Max: {max(episode_reward)}")
-        print(f"Total Collisions: {total_collisions} | Min: {min(collisions)} | Max: {max(collisions)}")
-        print(f"Total Deliveries: {total_deliveries} | Min: {min(deliveries)} | Max: {max(deliveries)}")
-        print(" --- ")
-        print(info)
-        print(" --- ")
+    if RECORD_OUTLIERS and (total_reward < 0 or total_collisions > 10 or total_deliveries < 1):
+        outliers[ep] = {"actions": action_list, "seed": seed}
 
-    if RECORD_OUTLIERS and total_reward < 0:
-        save_animation(frames, f"videos/test/{model_name}_wp/video_ep{ep+1}")
+    if SAVE_STATS:
+        episode_stats = {
+            "episode": ep + 1,
+            "rewards": {
+                "individual": list(info["episode_reward"]),
+                "total": total_reward,
+            },
+            "collisions": {
+                "individual": list(info["collisions"]),
+                "total": total_collisions,
+            },
+            "deliveries": {
+                "individual": list(info["deliveries"]),
+                "total": total_deliveries,
+            },
+        }
+        stats["episodes"].append(episode_stats)
 
-update_values(
-    [
+
+"""
+if GSHEET_ROW:
+    # Write results to google sheets if a row num is provided
+    update_values(
         [
-            min(all_rewards),
-            max(all_rewards),
-            sum(all_rewards) / EPISODES,
-            min(all_collisions),
-            max(all_collisions),
-            sum(all_collisions) / EPISODES,
-            min(all_deliveries),
-            max(all_deliveries),
-            sum(all_deliveries) / EPISODES,
-        ]
-    ],
-    3,
-)
+            [
+                min(all_rewards),
+                max(all_rewards),
+                sum(all_rewards) / EPISODES,
+                min(all_collisions),
+                max(all_collisions),
+                sum(all_collisions) / EPISODES,
+                min(all_deliveries),
+                max(all_deliveries),
+                sum(all_deliveries) / EPISODES,
+            ]
+        ],
+        GSHEET_ROW,
+    )
+"""
+
+if SAVE_STATS:
+    stats["averages"] = {
+        "rewards": {
+            "min": min(all_rewards),
+            "max": max(all_rewards),
+            "average": sum(all_rewards) / EPISODES,
+        },
+        "collisions": {
+            "min": min(all_collisions),
+            "max": max(all_collisions),
+            "average": sum(all_collisions) / EPISODES,
+        },
+        "deliveries": {
+            "min": min(all_deliveries),
+            "max": max(all_deliveries),
+            "average": sum(all_deliveries) / EPISODES,
+        },
+    }
+
+    # Log stats to file
+    with open(f"C:/Users/smithr38/Code/School/Thesis-Project/stats/episode_{ep+1}.json", "w") as f:
+        json.dump(stats, f, indent=4)
+
+# Print stats
 print(f"--- Averages Over {EPISODES} Episodes ---")
 print(f"Average rewards: {sum(all_rewards) / EPISODES} | Min: {min(all_rewards)} | Max: {max(all_rewards)}")
 print(f"Average collisions: {sum(all_collisions) / EPISODES} | Min: {min(all_collisions)} | Max: {max(all_collisions)}")
 print(f"Average deliveries: {sum(all_deliveries) / EPISODES} | Min: {min(all_deliveries)} | Max: {max(all_deliveries)}")
 print("---")
+
+# Save outlier episodes
+if len(outliers) > 0:
+    for i, (ep, outlier) in enumerate(outliers.items()):
+        print(f"Rendering outlier: {i + 1} / {len(outliers)}", end="\r")
+
+        # Create the directory if it doesn't exist
+        output_dir = f"C:/Users/smithr38/Code/School/Thesis-Project/videos/{model_name}_outliers"
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Initialize the environment
+        o_frames = []
+        o_env = gym.make(env_name)
+        o_env = TimeLimit(o_env, time_limit)
+        o_env = RecordEpisodeStatistics(o_env)
+        o_env.seed(outlier["seed"])
+        o_env.reset()
+
+        # Render the environment and save animation
+        o_frames.append(o_env.render(mode="rgb_array"))
+        for action in outlier["actions"]:
+            o_env.step(action)
+            o_frames.append(o_env.render(mode="rgb_array"))
+        o_env.close()
+        save_animation(o_frames, os.path.join(output_dir, f"ep_{ep+1}_outlier.mp4"))
