@@ -11,7 +11,7 @@ def _update_scene(num, frames, patch):
     return (patch,)
 
 
-def plot_animation(frames, repeat=False, interval=40):
+def plot_animation(frames, repeat=False, interval=100):
     fig = plt.figure()
     patch = plt.imshow(frames[0])
     plt.axis("off")
@@ -25,4 +25,4 @@ def plot_animation(frames, repeat=False, interval=40):
 def save_animation(frames, filename):
     anim = plot_animation(frames)
     FFwriter = animation.FFMpegWriter(fps=10)
-    anim.save("videos\\" + filename, writer=FFwriter)
+    anim.save(filename, writer=FFwriter)
