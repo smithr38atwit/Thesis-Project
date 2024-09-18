@@ -18,11 +18,13 @@ def plot_animation(frames, repeat=False, interval=100):
     anim = animation.FuncAnimation(
         fig, _update_scene, fargs=(frames, patch), frames=len(frames), repeat=repeat, interval=interval
     )
-    plt.close()
-    return anim
+    return anim, fig
 
 
 def save_animation(frames, filename):
-    anim = plot_animation(frames)
+    anim, fig = plot_animation(frames)
     FFwriter = animation.FFMpegWriter(fps=10)
     anim.save(filename, writer=FFwriter)
+    plt.close(fig)
+    plt.clf()
+    plt.close("all")
