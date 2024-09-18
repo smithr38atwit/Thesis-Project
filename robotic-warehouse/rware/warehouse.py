@@ -369,6 +369,9 @@ class Warehouse(gym.Env):
 
         self.renderer = None
 
+        self.np_random: np.random.RandomState = None
+        self.seed()
+
     def _make_layout_from_params(self, shelf_columns, shelf_rows, column_height):
         assert shelf_columns % 2 == 1, "Only odd number of shelf columns is supported"
 
@@ -772,14 +775,14 @@ class Warehouse(gym.Env):
 
         # spawn agents at random locations
         """
-        agent_locs = np.random.choice(
+        agent_locs = self.np_random.choice(
             np.arange(self.grid_size[0] * self.grid_size[1]),
             size=self.n_agents,
             replace=False,
         )
         agent_locs = np.unravel_index(agent_locs, self.grid_size)
         # and direction
-        agent_dirs = np.random.choice([d for d in Direction], size=self.n_agents)
+        agent_dirs = self.np_random.choice([d for d in Direction], size=self.n_agents)
         self.agents = [Agent(x, y, dir_, self.msg_bits) for y, x, dir_ in zip(*agent_locs, agent_dirs)]
         """
 
@@ -800,10 +803,13 @@ class Warehouse(gym.Env):
         else:
             # Keep choosing random locations until all are valid
             while len(people_locs) < self.n_people:
-                loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
-                if self._is_highway(loc[0], loc[1]):  # and loc not in agent_locs_set:
+                loc = (
+                    self.np_random.randint(self.grid_size[1]),
+                    self.np_random.randint(self.grid_size[0]),
+                )
+                if not self._is_highway(loc[0], loc[1]):  # and loc not in agent_locs_set:
                     people_locs.append(loc)
-            people_dirs = np.random.choice([d for d in Direction], size=self.n_people)
+            people_dirs = self.np_random.choice([d for d in Direction], size=self.n_people)
         self.people = [
             Person(x, y, dir_, mt, size, step)
             for (x, y), dir_, mt, size, step in zip(
@@ -814,15 +820,15 @@ class Warehouse(gym.Env):
         agent_locs = []
         people_locs_set = set(people_locs)
         while len(agent_locs) < self.n_agents:
-            loc = np.random.randint(self.grid_size[1]), np.random.randint(self.grid_size[0])
+            loc = self.np_random.randint(self.grid_size[1]), self.np_random.randint(self.grid_size[0])
             if loc not in people_locs_set and loc not in agent_locs:
                 agent_locs.append(loc)
-        agent_dirs = np.random.choice([d for d in Direction], size=self.n_agents)
+        agent_dirs = self.np_random.choice([d for d in Direction], size=self.n_agents)
         self.agents = [Agent(x, y, dir_, self.msg_bits) for (x, y), dir_ in zip(agent_locs, agent_dirs)]
 
         self._recalc_grid()
 
-        self.request_queue = list(np.random.choice(self.shelfs, size=self.request_queue_size, replace=False))
+        self.request_queue = list(self.np_random.choice(self.shelfs, size=self.request_queue_size, replace=False))
 
         return tuple([self._make_obs(agent) for agent in self.agents])
         # for s in self.shelfs:
@@ -840,7 +846,7 @@ class Warehouse(gym.Env):
 
         for person in self.people:
             if person.move_type == MoveType.RANDOM:
-                person.req_action = np.random.choice(list(PersonAction))
+                person.req_action = self.np_random.choice(list(PersonAction))
             elif person.move_type == MoveType.RECTANGLE:
                 rec_side = 0 if person.dir == Direction.RIGHT or person.dir == Direction.LEFT else 1
                 if person.steps == person.rec_size[rec_side] - 1:
@@ -1023,7 +1029,8 @@ class Warehouse(gym.Env):
             # a shelf was successfully delived.
             shelf_delivered = True
             # remove from queue and replace it
-            new_request = np.random.choice(list(set(self.shelfs) - set(self.request_queue)))
+            candidates = [s for s in self.shelfs if s not in self.request_queue]
+            new_request = self.np_random.choice(candidates)
             self.request_queue[self.request_queue.index(shelf)] = new_request
             # also reward the agents
             agent_id = self.grid[_LAYER_AGENTS, x, y]
@@ -1058,14 +1065,16 @@ class Warehouse(gym.Env):
         if not self.renderer:
             from rware.rendering import Viewer
 
-            self.renderer = Viewer(self.grid_size, mode)
+            self.renderer = Viewer(self.grid_size)
         return self.renderer.render(self, return_rgb_array=mode == "rgb_array")
 
     def close(self):
         if self.renderer:
             self.renderer.close()
 
-    def seed(self, seed=None): ...
+    def seed(self, seed=None):
+        self.np_random, seed = gym.utils.seeding.np_random(seed)
+        return [seed]
 
 
 if __name__ == "__main__":
