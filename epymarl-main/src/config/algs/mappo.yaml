@@ -7,10 +7,10 @@ runner: "parallel"
 
 buffer_size: 10
 batch_size_run: 10
-batch_size: 10
+batch_size: 10 # number of env steps collected before updating the policy via gradient descent
 
 # update the target network every {} training steps
-target_update_interval_or_tau: 0.01
+target_update_interval_or_tau: 0.01 # rate of the polyak average technique used to update the target networks (for soft updates)
 
 lr: 0.0005
 
@@ -20,13 +20,14 @@ obs_individual_obs: False
 
 agent_output_type: "pi_logits"
 learner: "ppo_learner"
-entropy_coef: 0.001
+entropy_coef: 0.001 # weight of the entropy term in the loss function
 use_rnn: False
 standardise_returns: False
 standardise_rewards: False
 q_nstep: 10 # 1 corresponds to normal r + gammaV
 critic_type: "cv_critic"
 epochs: 4
-eps_clip: 0.2
+eps_clip: 0.2 # refers to the epsilon in the policy objective and value loss which controls 
+              # the extent to which large policy and value function changes are penalized
 name: "mappo"
 # t_max: 20050000

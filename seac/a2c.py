@@ -29,10 +29,11 @@ def config():
     recurrent_policy = False
     use_linear_lr_decay = False
 
-    seac_coef = 1.0
+    seac_coef = 1.0  # weighting of experience from other agents
 
-    num_processes = 4
-    num_steps = 5
+    # for passing in batches to optimizer
+    num_processes = 4  # number of parallel environments
+    num_steps = 5  # number of steps per batch
 
     device = "cpu"  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
