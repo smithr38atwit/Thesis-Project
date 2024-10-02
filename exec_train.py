@@ -7,7 +7,7 @@ class Algs(Enum):
     MAPPO = 1
 
 
-ALGORITHM = Algs.SEAC
+ALGORITHM = Algs.MAPPO
 EVAL = False
 
 match ALGORITHM:
