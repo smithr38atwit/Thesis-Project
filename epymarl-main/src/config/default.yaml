@@ -17,7 +17,7 @@ use_cuda: False # Use gpu by default unless it isn't available
 buffer_cpu_only: True # If true we won't keep all of the replay buffer in vram
 
 # --- Logging options ---
-use_tensorboard: False # Log results to tensorboard
+use_tensorboard: True # Log results to tensorboard
 save_model: True # Save the models to disk
 save_model_interval: 1000000 # Save models after this many timesteps
 checkpoint_path: "" # "/home/lambda10/rsmith_thesis/Thesis-Project/epymarl-main/results/models/qmix_seed245366727_rware_rware-tiny-2ag-v1_2024-04-04 05_20_21.489528" # Load a checkpoint from this path
