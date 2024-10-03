@@ -1,0 +1,84 @@
+[INFO 15:02:50] pymarl Running command 'my_main'
+[INFO 15:02:50] pymarl Started run with ID "3"
+[DEBUG 15:02:50] pymarl Starting Heartbeat
+[DEBUG 15:02:50] my_main Started
+[INFO 15:02:50] my_main Experiment Parameters:
+[INFO 15:02:50] my_main 
+
+{   'action_selector': 'soft_policies',
+    'add_value_last_step': True,
+    'agent': 'rnn',
+    'agent_output_type': 'pi_logits',
+    'batch_size': 10,
+    'batch_size_run': 10,
+    'buffer_cpu_only': True,
+    'buffer_size': 10,
+    'checkpoint_path': '/home/smithr38/Thesis-Project/epymarl-main/results/models/base_20m_tiny_2ag_seed689681497',
+    'critic_type': 'cv_critic',
+    'entropy_coef': 0.001,
+    'env': 'gymma',
+    'env_args': {   'key': 'rware:rware-tiny-2ag-v1',
+                    'pretrained_wrapper': None,
+                    'seed': 900365718,
+                    'time_limit': 500},
+    'epochs': 4,
+    'eps_clip': 0.2,
+    'evaluate': False,
+    'gamma': 0.99,
+    'grad_norm_clip': 10,
+    'hidden_dim': 128,
+    'hypergroup': None,
+    'label': 'default_label',
+    'learner': 'ppo_learner',
+    'learner_log_interval': 10000,
+    'load_step': 0,
+    'local_results_path': 'epymarl-main/results',
+    'log_interval': 50000,
+    'lr': 0.0005,
+    'mac': 'basic_mac',
+    'mask_before_softmax': True,
+    'name': 'mappo',
+    'obs_agent_id': True,
+    'obs_individual_obs': False,
+    'obs_last_action': False,
+    'optim_alpha': 0.99,
+    'optim_eps': 1e-05,
+    'q_nstep': 10,
+    'render': False,
+    'repeat_id': 1,
+    'runner': 'parallel',
+    'runner_log_interval': 10000,
+    'save_model': True,
+    'save_model_interval': 1000000,
+    'save_replay': False,
+    'seed': 900365718,
+    'standardise_returns': False,
+    'standardise_rewards': False,
+    't_max': 40050000,
+    'target_update_interval_or_tau': 0.01,
+    'test_greedy': True,
+    'test_interval': 50000,
+    'test_nepisode': 100,
+    'use_cuda': False,
+    'use_rnn': False,
+    'use_tensorboard': True}
+
+[INFO 15:02:51] my_main Loading model from /home/smithr38/Thesis-Project/epymarl-main/results/models/base_20m_tiny_2ag_seed689681497/20005000
+[INFO 15:02:51] my_main Beginning training for 40050000 timesteps
+[INFO 15:02:54] my_main t_env: 20010000 / 40050000
+[INFO 15:02:54] my_main Estimated time left: 3 seconds. Time passed: 3 seconds
+[INFO 15:03:13] my_main Saving models to epymarl-main/results/models/mappo_seed900365718_rware_rware-tiny-2ag-v1_2024-10-03 15_02_50.900823/20010000
+[INFO 15:03:13] my_main Recent Stats | t_env:   20010000 | Episode:       10
+advantage_mean:           -0.0437	agent_grad_norm:           0.3426	critic_grad_norm:          1.0088	critic_loss:               0.0719
+ep_length_mean:          500.0000	pg_loss:                   0.5123	pi_max:                    0.9783	q_taken_mean:              3.5711
+return_mean:              20.9000	return_std:                1.8682	target_mean:               3.5274	td_error_abs:              0.2172
+test_ep_length_mean:     500.0000	test_return_mean:         17.9000	test_return_std:           2.6439	
+[INFO 15:03:48] my_main t_env: 20060000 / 40050000
+[INFO 15:03:48] my_main Estimated time left: 5 hours, 55 minutes, 53 seconds. Time passed: 56 seconds
+[INFO 15:04:07] my_main Recent Stats | t_env:   20060000 | Episode:      110
+advantage_mean:            0.0331	agent_grad_norm:           0.0807	critic_grad_norm:          0.8153	critic_loss:               0.0713
+ep_length_mean:          500.0000	pg_loss:                  -0.0334	pi_max:                    0.9780	q_taken_mean:              3.3346
+return_mean:              18.5200	return_std:                3.0284	target_mean:               3.3677	td_error_abs:              0.2121
+test_ep_length_mean:     500.0000	test_return_mean:         18.9550	test_return_std:           2.3405	
+[INFO 15:04:42] my_main t_env: 20110000 / 40050000
+[INFO 15:04:42] my_main Estimated time left: 6 hours, 2 minutes, 14 seconds. Time passed: 1 minutes, 51 seconds
