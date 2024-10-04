@@ -43,7 +43,7 @@
       ]
     ]
   },
-  "heartbeat": "2024-10-03T19:05:00.966222",
+  "heartbeat": "2024-10-04T01:10:06.758623",
   "host": {
     "ENV": {},
     "cpu": "AMD Ryzen Threadripper PRO 3955WX 16-Cores",
@@ -109,5 +109,6 @@
   "resources": [],
   "result": null,
   "start_time": "2024-10-03T19:02:50.896262",
-  "status": "RUNNING"
+  "status": "COMPLETED",
+  "stop_time": "2024-10-04T01:10:06.711730"
 }
