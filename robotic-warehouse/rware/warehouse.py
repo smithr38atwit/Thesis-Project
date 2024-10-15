@@ -243,6 +243,8 @@ class Warehouse(gym.Env):
         people_steps: Optional[List] = [0, 2, 0, 2],
         people_move_types: List[MoveType] = [MoveType.RECTANGLE],
         rec_sizes: List[Tuple] = [(4, 8)],
+        delivery_reward: float = 1,
+        collision_penalty: float = 0.5,
     ):
         """The robotic warehouse environment
 
@@ -322,6 +324,8 @@ class Warehouse(gym.Env):
         self.max_inactivity_steps: Optional[int] = max_inactivity_steps
         self.reward_type = reward_type
         self.reward_range = (0, 1)
+        self.delivery_reward = delivery_reward
+        self.collision_penalty = collision_penalty
 
         self.people_starts = people_starts[:n_people]
         # Account for increased col height (but not row length)
@@ -939,9 +943,9 @@ class Warehouse(gym.Env):
             if agent.id > 0 and self.grid[_LAYER_AGENTS, new_y, new_x] < 0:
                 info[f"agent{agent.id-1}/collisions"] += 1
                 if self.reward_type == RewardType.GLOBAL:
-                    rewards -= 0.5
+                    rewards -= self.collision_penalty
                 elif self.reward_type == RewardType.INDIVIDUAL or self.reward_type == RewardType.TWO_STAGE:
-                    rewards[agent.id - 1] -= 0.5
+                    rewards[agent.id - 1] -= self.collision_penalty
             agent.req_action = Action.NOOP
 
         commited_people = set([self.people[-1 * id_ - 1] for id_ in commited_people])
@@ -982,7 +986,7 @@ class Warehouse(gym.Env):
                 if not self._is_highway(agent.x, agent.y):
                     agent.carrying_shelf = None
                     if agent.has_delivered and self.reward_type == RewardType.TWO_STAGE:
-                        rewards[agent.id - 1] += 0.5
+                        rewards[agent.id - 1] += self.delivery_reward / 2
 
                     agent.has_delivered = False
 
@@ -1035,12 +1039,12 @@ class Warehouse(gym.Env):
             # also reward the agents
             agent_id = self.grid[_LAYER_AGENTS, x, y]
             if self.reward_type == RewardType.GLOBAL:
-                rewards += 1
+                rewards += self.delivery_reward
             elif self.reward_type == RewardType.INDIVIDUAL:
-                rewards[agent_id - 1] += 1
+                rewards[agent_id - 1] += self.delivery_reward
             elif self.reward_type == RewardType.TWO_STAGE:
                 self.agents[agent_id - 1].has_delivered = True
-                rewards[agent_id - 1] += 0.5
+                rewards[agent_id - 1] += self.delivery_reward / 2
 
             # track deliveries
             info[f"agent{agent_id-1}/deliveries"] += 1
