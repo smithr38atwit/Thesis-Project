@@ -64,6 +64,8 @@ class RewardType(Enum):
     GLOBAL = 0
     INDIVIDUAL = 1
     TWO_STAGE = 2
+    TWO_STAGE_PICKUP = 3
+    THREE_STAGE = 4
 
 
 class ObserationType(Enum):
@@ -116,6 +118,7 @@ class Agent(Entity):
         self.carrying_shelf: Optional[Shelf] = None
         self.canceled_action = None
         self.has_delivered = False
+        self.has_picked_up = False
 
     @property
     def collision_layers(self):
@@ -226,7 +229,7 @@ class Warehouse(gym.Env):
         max_inactivity_steps: Optional[int],
         max_steps: Optional[int],
         reward_type: RewardType,
-        n_people: int = 1,
+        n_people: int = 0,
         layout: str = None,
         observation_type: ObserationType = ObserationType.FLATTENED,
         image_observation_layers: List[ImageLayer] = [
@@ -944,7 +947,7 @@ class Warehouse(gym.Env):
                 info[f"agent{agent.id-1}/collisions"] += 1
                 if self.reward_type == RewardType.GLOBAL:
                     rewards -= self.collision_penalty
-                elif self.reward_type == RewardType.INDIVIDUAL or self.reward_type == RewardType.TWO_STAGE:
+                else:
                     rewards[agent.id - 1] -= self.collision_penalty
             agent.req_action = Action.NOOP
 
@@ -981,12 +984,31 @@ class Warehouse(gym.Env):
             elif agent.req_action == Action.TOGGLE_LOAD and not agent.carrying_shelf:
                 shelf_id = self.grid[_LAYER_SHELFS, agent.y, agent.x]
                 if shelf_id:
-                    agent.carrying_shelf = self.shelfs[shelf_id - 1]
+                    shelf = self.shelfs[shelf_id - 1]
+                    agent.carrying_shelf = shelf
+                    # First 3-stage and 2-stage-pickup reward: picking up requested shelf
+                    if (
+                        shelf in self.request_queue
+                        and not agent.has_picked_up
+                        and (
+                            self.reward_type == RewardType.THREE_STAGE
+                            or self.reward_type == RewardType.TWO_STAGE_PICKUP
+                        )
+                    ):
+                        rewards[agent.id - 1] += self.delivery_reward / (
+                            3.0 if self.reward_type == RewardType.THREE_STAGE else 2.0
+                        )
+                        self.agents[agent.id - 1].has_picked_up = True
             elif agent.req_action == Action.TOGGLE_LOAD and agent.carrying_shelf:
                 if not self._is_highway(agent.x, agent.y):
                     agent.carrying_shelf = None
-                    if agent.has_delivered and self.reward_type == RewardType.TWO_STAGE:
-                        rewards[agent.id - 1] += self.delivery_reward / 2
+                    # Last reward for 2 return and 3 stage: returning shelf after delivery
+                    if agent.has_delivered and (
+                        self.reward_type == RewardType.TWO_STAGE or self.reward_type == RewardType.THREE_STAGE
+                    ):
+                        rewards[agent.id - 1] += self.delivery_reward / (
+                            3.0 if self.reward_type == RewardType.THREE_STAGE else 2.0
+                        )
 
                     agent.has_delivered = False
 
@@ -1042,9 +1064,16 @@ class Warehouse(gym.Env):
                 rewards += self.delivery_reward
             elif self.reward_type == RewardType.INDIVIDUAL:
                 rewards[agent_id - 1] += self.delivery_reward
-            elif self.reward_type == RewardType.TWO_STAGE:
+            elif (
+                self.reward_type == RewardType.TWO_STAGE
+                or self.reward_type == RewardType.TWO_STAGE_PICKUP
+                or self.reward_type == RewardType.THREE_STAGE
+            ):
                 self.agents[agent_id - 1].has_delivered = True
-                rewards[agent_id - 1] += self.delivery_reward / 2
+                self.agents[agent_id - 1].has_picked_up = False
+                rewards[agent_id - 1] += self.delivery_reward / (
+                    3.0 if self.reward_type == RewardType.THREE_STAGE else 2.0
+                )
 
             # track deliveries
             info[f"agent{agent_id-1}/deliveries"] += 1
