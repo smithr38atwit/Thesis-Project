@@ -1,0 +1,160 @@
+{
+  "artifacts": [
+    "u1000000.tar.xz",
+    "u1002500.tar.xz"
+  ],
+  "command": "main",
+  "experiment": {
+    "base_dir": "/home/smithr38/Thesis-Project/seac",
+    "dependencies": [
+      "gym==0.21.0",
+      "numpy==1.26.4",
+      "rware==1.0.3",
+      "sacred==0.8.5",
+      "torch==2.2.2"
+    ],
+    "mainfile": "train.py",
+    "name": "train",
+    "repositories": [
+      {
+        "commit": "17cf344d82f708f94be87ce3da4464b70511d831",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "17cf344d82f708f94be87ce3da4464b70511d831",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "17cf344d82f708f94be87ce3da4464b70511d831",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "17cf344d82f708f94be87ce3da4464b70511d831",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "17cf344d82f708f94be87ce3da4464b70511d831",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "17cf344d82f708f94be87ce3da4464b70511d831",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "17cf344d82f708f94be87ce3da4464b70511d831",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      }
+    ],
+    "sources": [
+      [
+        "a2c.py",
+        "_sources/a2c_673b48ea7e0ca08b973010cadd326636.py"
+      ],
+      [
+        "envs.py",
+        "_sources/envs_5a5231d6d8c67bc31a0fe75f0b1d5b71.py"
+      ],
+      [
+        "model.py",
+        "_sources/model_d701be477866bee33f77297b8ffd9fd9.py"
+      ],
+      [
+        "storage.py",
+        "_sources/storage_45b28a2edd046ff4940eb8dc520ed314.py"
+      ],
+      [
+        "train.py",
+        "_sources/train_7ada83732d45982f9706f67c64eced03.py"
+      ],
+      [
+        "utils.py",
+        "_sources/utils_5e47da5675b2ecf67d9f26cf6ec5ad7c.py"
+      ],
+      [
+        "wrappers.py",
+        "_sources/wrappers_c40ebfbf37152e562e3a1bfa4f80a3f4.py"
+      ]
+    ]
+  },
+  "heartbeat": "2024-11-17T11:44:45.652754",
+  "host": {
+    "ENV": {},
+    "cpu": "AMD Ryzen Threadripper PRO 3955WX 16-Cores",
+    "gpus": {
+      "driver_version": "550.107.02",
+      "gpus": [
+        {
+          "model": "NVIDIA GeForce RTX 3090",
+          "persistence_mode": true,
+          "total_memory": 24576
+        },
+        {
+          "model": "NVIDIA GeForce RTX 3090",
+          "persistence_mode": true,
+          "total_memory": 24576
+        }
+      ]
+    },
+    "hostname": "lambda3",
+    "os": [
+      "Linux",
+      "Linux-6.8.0-40-generic-x86_64-with-glibc2.35"
+    ],
+    "python_version": "3.10.12"
+  },
+  "meta": {
+    "command": "main",
+    "config_updates": {
+      "env_name": "rware-tiny-2ag-v1",
+      "eval_interval": null,
+      "num_env_steps": 20050000.0,
+      "time_limit": 500,
+      "transfer": true
+    },
+    "named_configs": [],
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--id": null,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [
+        "env_name=rware-tiny-2ag-v1",
+        "num_env_steps=20050000.0",
+        "time_limit=500",
+        "transfer=True",
+        "eval_interval=None"
+      ],
+      "help": false,
+      "with": true
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2024-11-17T05:10:31.630446",
+  "status": "COMPLETED",
+  "stop_time": "2024-11-17T11:44:43.649904"
+}

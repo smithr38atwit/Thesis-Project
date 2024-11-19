@@ -8,3 +8,5 @@ seac/rware/
 # Google sheets API
 credentials.json
 token.json
+
+results/loss/

@@ -1,0 +1,41 @@
+{
+  "algorithm": {
+    "adam_eps": 0.001,
+    "device": "cpu",
+    "entropy_coef": 0.01,
+    "gae_lambda": 0.95,
+    "gamma": 0.99,
+    "lr": 0.0003,
+    "max_grad_norm": 0.5,
+    "num_processes": 4,
+    "num_steps": 5,
+    "recurrent_policy": false,
+    "seac_coef": 1.0,
+    "use_gae": false,
+    "use_linear_lr_decay": false,
+    "use_proper_time_limits": true,
+    "value_loss_coef": 0.5
+  },
+  "dummy_vecenv": false,
+  "env_name": "rware-tiny-2ag-v1",
+  "episodes_per_eval": 8,
+  "eval_dir": "./results/video/{id}",
+  "eval_interval": null,
+  "log_interval": 2000,
+  "loss_dir": "./results/loss/{id}",
+  "models_dir": "/home/smithr38/Thesis-Project/results/trained_models/1/u1000000",
+  "num_env_steps": 20050000.0,
+  "save_dir": "./results/trained_models/{id}",
+  "save_interval": 1000000,
+  "seed": 867881675,
+  "time_limit": 500,
+  "transfer": true,
+  "wrappers": [
+    {
+      "py/type": "wrappers.RecordEpisodeStatistics"
+    },
+    {
+      "py/type": "wrappers.SquashDones"
+    }
+  ]
+}
