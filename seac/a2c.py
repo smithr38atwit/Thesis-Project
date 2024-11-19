@@ -16,14 +16,14 @@ algorithm = Ingredient("algorithm")
 
 @algorithm.config
 def config():
-    lr = 3e-4
-    adam_eps = 0.001
-    gamma = 0.99
-    use_gae = False
-    gae_lambda = 0.95
-    entropy_coef = 0.01
-    value_loss_coef = 0.5
-    max_grad_norm = 0.5
+    lr = 3e-4  # learning rate of optimizer; step size at each update
+    adam_eps = 0.001  # epsilon for Adam optimizer
+    gamma = 0.99  # discount factor for future rewards
+    use_gae = False  # use generalized advantage estimation
+    gae_lambda = 0.95  # lambda for GAE
+    entropy_coef = 0.01  # weighting of entropy term in loss function
+    value_loss_coef = 0.5  # scales the value loss relative to policy loss
+    max_grad_norm = 0.5  # maximum norm for gradient clipping; prevents "exploding gradients"
 
     use_proper_time_limits = True
     recurrent_policy = False
