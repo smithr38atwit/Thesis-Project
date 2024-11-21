@@ -8,21 +8,22 @@ import numpy as np
 import rware
 import torch
 from a2c import A2C
+from scipy import stats as sts
 from wrappers import RecordEpisodeStatistics, TimeLimit
 
 sys.path.append("C:/Users/smithr38/Code/School/Thesis-Project/")
 from custom_utils.animations import save_animation
 
-model_name = "seac/tiny_2ag_1p_20m"
-path = f"C:/Users/smithr38/Code/School/Thesis-Project/models/{model_name}"
+model_name = "u2002500"
+path = "C:/Users/smithr38/Code/School/Thesis-Project/results/trained_models/1/" + model_name
 env_name = "rware-tiny-2ag-v1"
 time_limit = 500  # 25 for LBF
 
 GSHEET_ROW = None
 EPISODES = 1000
 RECORD = False
-RECORD_OUTLIERS = True
-SAVE_STATS = True
+RECORD_OUTLIERS = False
+SAVE_STATS = False
 
 env = gym.make(env_name)
 agents = [
@@ -112,6 +113,14 @@ for ep in range(EPISODES):
         stats["episodes"].append(episode_stats)
 
 
+# Calculate 95% confidence intervals
+def calculate_confidence_interval(data):
+    mean = np.mean(data)
+    sem = sts.sem(data)
+    confidence_interval = sts.t.interval(0.95, len(data) - 1, loc=mean, scale=sem)
+    return (confidence_interval[1] - confidence_interval[0]) / 2
+
+
 """
 if GSHEET_ROW:
     # Write results to google sheets if a row num is provided
@@ -139,16 +148,19 @@ if SAVE_STATS:
             "min": min(all_rewards),
             "max": max(all_rewards),
             "average": sum(all_rewards) / EPISODES,
+            "confidence_interval": calculate_confidence_interval(all_rewards),
         },
         "collisions": {
             "min": min(all_collisions),
             "max": max(all_collisions),
             "average": sum(all_collisions) / EPISODES,
+            "confidence_interval": calculate_confidence_interval(all_collisions) if np.mean(all_collisions) > 0 else 0,
         },
         "deliveries": {
             "min": min(all_deliveries),
             "max": max(all_deliveries),
             "average": sum(all_deliveries) / EPISODES,
+            "confidence_interval": calculate_confidence_interval(all_deliveries),
         },
     }
 
@@ -164,9 +176,15 @@ if SAVE_STATS:
 
 # Print stats
 print(f"--- Averages Over {EPISODES} Episodes ---")
-print(f"Average rewards: {sum(all_rewards) / EPISODES} | Min: {min(all_rewards)} | Max: {max(all_rewards)}")
-print(f"Average collisions: {sum(all_collisions) / EPISODES} | Min: {min(all_collisions)} | Max: {max(all_collisions)}")
-print(f"Average deliveries: {sum(all_deliveries) / EPISODES} | Min: {min(all_deliveries)} | Max: {max(all_deliveries)}")
+print(
+    f"Average rewards: {sum(all_rewards) / EPISODES} | Min: {min(all_rewards)} | Max: {max(all_rewards)} | 95% CI: {calculate_confidence_interval(all_rewards)}"
+)
+print(
+    f"Average collisions: {sum(all_collisions) / EPISODES} | Min: {min(all_collisions)} | Max: {max(all_collisions)} | 95% CI: {calculate_confidence_interval(all_collisions) if np.mean(all_collisions) > 0 else 0}"
+)
+print(
+    f"Average deliveries: {sum(all_deliveries) / EPISODES} | Min: {min(all_deliveries)} | Max: {max(all_deliveries)} | 95% CI: {calculate_confidence_interval(all_deliveries)}"
+)
 print("---")
 
 # Save outlier episodes
