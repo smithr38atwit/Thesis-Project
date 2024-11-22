@@ -82,7 +82,9 @@ class _GymmaWrapper(MultiAgentEnv):
 
         self.n_agents = self._env.n_agents
         self._obs = None
-        self._info = None
+        self._info = {}
+        self.collisions = np.zeros(self.n_agents)
+        self.deliveries = np.zeros(self.n_agents)
 
         self.longest_action_space = max(self._env.action_space, key=lambda x: x.n)
         self.longest_observation_space = max(self._env.observation_space, key=lambda x: x.shape)
@@ -108,7 +110,17 @@ class _GymmaWrapper(MultiAgentEnv):
             reward = sum(reward)
         if type(done) is list:
             done = all(done)
-        return float(reward), done, {}
+
+        # Info
+        for i in range(self.n_agents):
+            self.collisions[i] += self._info.info[f"agent{i}/collisions"]
+            self.deliveries[i] += self._info.info[f"agent{i}/deliveries"]
+        if all(done):
+            self._info = {}
+            self._info["collisions"] = self.collisions
+            self._info["deliveries"] = self.deliveries
+
+        return float(reward), done, self._info
 
     def get_obs(self):
         """Returns all agent observations in a list"""
@@ -151,6 +163,9 @@ class _GymmaWrapper(MultiAgentEnv):
 
     def reset(self):
         """Returns initial observations and states"""
+        self._info = {}
+        self.collisions = np.zeros(self.n_agents)
+        self.deliveries = np.zeros(self.n_agents)
         self._obs = self._env.reset()
         self._obs = [
             np.pad(
