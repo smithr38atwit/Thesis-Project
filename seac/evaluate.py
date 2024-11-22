@@ -148,18 +148,21 @@ if SAVE_STATS:
             "min": min(all_rewards),
             "max": max(all_rewards),
             "average": sum(all_rewards) / EPISODES,
+            "std": np.std(all_rewards),
             "confidence_interval": calculate_confidence_interval(all_rewards),
         },
         "collisions": {
             "min": min(all_collisions),
             "max": max(all_collisions),
             "average": sum(all_collisions) / EPISODES,
+            "std": np.std(all_collisions),
             "confidence_interval": calculate_confidence_interval(all_collisions) if np.mean(all_collisions) > 0 else 0,
         },
         "deliveries": {
             "min": min(all_deliveries),
             "max": max(all_deliveries),
             "average": sum(all_deliveries) / EPISODES,
+            "std": np.std(all_deliveries),
             "confidence_interval": calculate_confidence_interval(all_deliveries),
         },
     }
@@ -177,13 +180,13 @@ if SAVE_STATS:
 # Print stats
 print(f"--- Averages Over {EPISODES} Episodes ---")
 print(
-    f"Average rewards: {sum(all_rewards) / EPISODES} | Min: {min(all_rewards)} | Max: {max(all_rewards)} | 95% CI: {calculate_confidence_interval(all_rewards)}"
+    f"Average rewards: {sum(all_rewards) / EPISODES} | Min: {min(all_rewards)} | Max: {max(all_rewards)} | STD: {np.std(all_rewards)} | 95% CI: {calculate_confidence_interval(all_rewards)}"
 )
 print(
-    f"Average collisions: {sum(all_collisions) / EPISODES} | Min: {min(all_collisions)} | Max: {max(all_collisions)} | 95% CI: {calculate_confidence_interval(all_collisions) if np.mean(all_collisions) > 0 else 0}"
+    f"Average collisions: {sum(all_collisions) / EPISODES} | Min: {min(all_collisions)} | Max: {max(all_collisions)} | STD: {np.std(all_collisions)} | 95% CI: {calculate_confidence_interval(all_collisions) if np.mean(all_collisions) > 0 else 0}"
 )
 print(
-    f"Average deliveries: {sum(all_deliveries) / EPISODES} | Min: {min(all_deliveries)} | Max: {max(all_deliveries)} | 95% CI: {calculate_confidence_interval(all_deliveries)}"
+    f"Average deliveries: {sum(all_deliveries) / EPISODES} | Min: {min(all_deliveries)} | Max: {max(all_deliveries)} | STD: {np.std(all_deliveries)} | 95% CI: {calculate_confidence_interval(all_deliveries)}"
 )
 print("---")
 

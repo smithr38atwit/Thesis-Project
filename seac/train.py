@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import rware  # noqa
 import torch
+import utils
 from a2c import A2C, algorithm
 from envs import make_vec_envs
 from model import Policy

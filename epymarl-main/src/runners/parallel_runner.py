@@ -275,14 +275,14 @@ class ParallelRunner:
         self.logger.log_stat(prefix + "return_min", min(returns), self.t_env)
         self.logger.log_stat(prefix + "return_max", max(returns), self.t_env)
         returns.clear()
-        if deliveries:
+        if deliveries and self.args.evaluate:
             self.logger.log_stat(prefix + "delivery_mean", np.mean(deliveries), self.t_env)
             self.logger.log_stat(prefix + "delivery_std", np.std(deliveries), self.t_env)
             self.logger.log_stat(prefix + "delivery_ci", self._ci(deliveries), self.t_env)
             self.logger.log_stat(prefix + "delivery_min", min(deliveries), self.t_env)
             self.logger.log_stat(prefix + "delivery_max", max(deliveries), self.t_env)
             deliveries.clear()
-        if collisions:
+        if collisions and self.args.evaluate:
             self.logger.log_stat(prefix + "collisions_mean", np.mean(collisions), self.t_env)
             self.logger.log_stat(prefix + "collision_std", np.std(collisions), self.t_env)
             self.logger.log_stat(
@@ -299,6 +299,8 @@ class ParallelRunner:
 
     def _ci(self, data):
         mean = np.mean(data)
+        if mean == 0:
+            return 0
         sem = sts.sem(data)
         confidence_interval = sts.t.interval(0.95, len(data) - 1, loc=mean, scale=sem)
         return (confidence_interval[1] - confidence_interval[0]) / 2

@@ -18,7 +18,7 @@ match ALGORITHM:
     case Algs.MAPPO:
         if EVAL:
             os.system(
-                'python epymarl-main/src/main.py --config=qmix --env-config=gymma with env_args.key="rware:rware-tiny-2ag-v1" evaluate=True'
+                'python epymarl-main/src/main.py --config=mappo --env-config=gymma with env_args.key="rware:rware-tiny-2ag-v1" evaluate=True'
             )
         else:
             os.system(
