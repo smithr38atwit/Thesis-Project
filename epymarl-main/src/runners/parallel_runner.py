@@ -1,3 +1,5 @@
+import json
+import os
 from functools import partial
 from multiprocessing import Pipe, Process
 
@@ -5,6 +7,7 @@ import numpy as np
 import torch as th
 from components.episode_buffer import EpisodeBatch
 from envs import REGISTRY as env_REGISTRY
+from scipy import stats as sts
 
 
 # Based (very) heavily on SubprocVecEnv from OpenAI Baselines
@@ -44,6 +47,10 @@ class ParallelRunner:
         self.test_returns = []
         self.train_stats = {}
         self.test_stats = {}
+        self.train_collisions = []
+        self.test_collisions = []
+        self.train_deliveries = []
+        self.test_deliveries = []
 
         self.log_train_stats_t = -100000
 
@@ -97,6 +104,8 @@ class ParallelRunner:
 
         all_terminated = False
         episode_returns = [0 for _ in range(self.batch_size)]
+        episode_deliveries = [0 for _ in range(self.batch_size)]
+        episode_collissions = [0 for _ in range(self.batch_size)]
         episode_lengths = [0 for _ in range(self.batch_size)]
         self.mac.init_hidden(batch_size=self.batch_size)
         terminated = [False for _ in range(self.batch_size)]
@@ -151,6 +160,8 @@ class ParallelRunner:
 
                     env_terminated = False
                     if data["terminated"]:
+                        episode_deliveries[idx] = data["info"].pop("deliveries", 0)
+                        episode_collissions[idx] = data["info"].pop("collisions", 0)
                         final_env_infos.append(data["info"])
                     if data["terminated"] and not data["info"].get("episode_limit", False):
                         env_terminated = True
@@ -185,6 +196,8 @@ class ParallelRunner:
 
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
+        cur_deliveries = self.test_deliveries if test_mode else self.train_deliveries
+        cur_collisions = self.test_collisions if test_mode else self.train_collisions
         log_prefix = "test_" if test_mode else ""
         infos = [cur_stats] + final_env_infos
         cur_stats.update({k: sum(d.get(k, 0) for d in infos) for k in set.union(*[set(d) for d in infos])})
@@ -192,10 +205,14 @@ class ParallelRunner:
         cur_stats["ep_length"] = sum(episode_lengths) + cur_stats.get("ep_length", 0)
 
         cur_returns.extend(episode_returns)
+        cur_deliveries.extend(episode_deliveries)
+        cur_collisions.extend(episode_collissions)
 
         n_test_runs = max(1, self.args.test_nepisode // self.batch_size) * self.batch_size
         if test_mode and (len(self.test_returns) == n_test_runs):
-            self._log(cur_returns, cur_stats, log_prefix)
+            if self.args.evaluate:
+                self._save_stats(cur_returns, cur_deliveries, cur_collisions)
+            self._log(cur_returns, cur_stats, log_prefix, cur_deliveries, cur_collisions)
         elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
             self._log(cur_returns, cur_stats, log_prefix)
             if hasattr(self.mac.action_selector, "epsilon"):
@@ -204,15 +221,87 @@ class ParallelRunner:
 
         return self.batch
 
-    def _log(self, returns, stats, prefix):
+    def _save_stats(self, returns, deliveries, collisions):
+        stats = {
+            "metadata": {
+                "model": self.args.friendly_name,
+                "model_path": self.args.checkpoint_path,
+                "env": self.args.env_args["key"],
+                "time_limit": self.args.env_args["time_limit"],
+                "num_episodes": self.args.test_nepisode,
+            },
+            "averages": {
+                "rewards": {
+                    "min": min(returns),
+                    "max": max(returns),
+                    "average": np.mean(returns),
+                    "std": np.std(returns),
+                    "confidence_interval": self._ci(returns),
+                },
+                "collisions": {
+                    "min": min(collisions),
+                    "max": max(collisions),
+                    "average": np.mean(collisions),
+                    "std": np.std(collisions),
+                    "confidence_interval": (self._ci(collisions) if np.mean(collisions) > 0 else 0),
+                },
+                "deliveries": {
+                    "min": min(deliveries),
+                    "max": max(deliveries),
+                    "average": np.mean(deliveries),
+                    "std": np.std(deliveries),
+                    "confidence_interval": self._ci(deliveries),
+                },
+            },
+            "returns": returns,
+            "collisions": collisions,
+            "deliveries": deliveries,
+        }
+
+        # Log stats to file with incrementing suffix
+        base_filename = f"/home/smithr38/Thesis-Project/stats/mappo/{self.args.friendly_name}.json"
+        suffix = 0
+        while os.path.exists(base_filename):
+            suffix += 1
+            base_filename = f"/home/smithr38/Thesis-Project/stats/mappo/{self.args.friendly_name}_{suffix}.json"
+
+        with open(base_filename, "w") as f:
+            json.dump(stats, f, indent=4)
+
+    def _log(self, returns, stats, prefix, deliveries=None, collisions=None):
         self.logger.log_stat(prefix + "return_mean", np.mean(returns), self.t_env)
         self.logger.log_stat(prefix + "return_std", np.std(returns), self.t_env)
+        self.logger.log_stat(prefix + "return_ci", self._ci(returns), self.t_env)
+        self.logger.log_stat(prefix + "return_min", min(returns), self.t_env)
+        self.logger.log_stat(prefix + "return_max", max(returns), self.t_env)
         returns.clear()
+        if deliveries:
+            self.logger.log_stat(prefix + "delivery_mean", np.mean(deliveries), self.t_env)
+            self.logger.log_stat(prefix + "delivery_std", np.std(deliveries), self.t_env)
+            self.logger.log_stat(prefix + "delivery_ci", self._ci(deliveries), self.t_env)
+            self.logger.log_stat(prefix + "delivery_min", min(deliveries), self.t_env)
+            self.logger.log_stat(prefix + "delivery_max", max(deliveries), self.t_env)
+            deliveries.clear()
+        if collisions:
+            self.logger.log_stat(prefix + "collisions_mean", np.mean(collisions), self.t_env)
+            self.logger.log_stat(prefix + "collision_std", np.std(collisions), self.t_env)
+            self.logger.log_stat(
+                prefix + "collision_ci", self._ci(collisions) if np.mean(collisions) > 0 else 0, self.t_env
+            )
+            self.logger.log_stat(prefix + "collision_min", min(collisions), self.t_env)
+            self.logger.log_stat(prefix + "collision_max", max(collisions), self.t_env)
+            collisions.clear()
 
         for k, v in stats.items():
             if k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean", v / stats["n_episodes"], self.t_env)
         stats.clear()
+
+    def _ci(self, data):
+        mean = np.mean(data)
+        sem = sts.sem(data)
+        confidence_interval = sts.t.interval(0.95, len(data) - 1, loc=mean, scale=sem)
+        return (confidence_interval[1] - confidence_interval[0]) / 2
 
 
 def env_worker(remote, env_fn):

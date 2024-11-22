@@ -113,12 +113,12 @@ class _GymmaWrapper(MultiAgentEnv):
 
         # Info
         for i in range(self.n_agents):
-            self.collisions[i] += self._info.info[f"agent{i}/collisions"]
-            self.deliveries[i] += self._info.info[f"agent{i}/deliveries"]
-        if all(done):
+            self.collisions[i] += self._info[f"agent{i}/collisions"]
+            self.deliveries[i] += self._info[f"agent{i}/deliveries"]
+        if done:
             self._info = {}
-            self._info["collisions"] = self.collisions
-            self._info["deliveries"] = self.deliveries
+            self._info["collisions"] = np.sum(self.collisions)
+            self._info["deliveries"] = np.sum(self.deliveries)
 
         return float(reward), done, self._info
 
