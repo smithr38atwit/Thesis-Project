@@ -14,9 +14,9 @@ from wrappers import RecordEpisodeStatistics, TimeLimit
 sys.path.append("C:/Users/smithr38/Code/School/Thesis-Project/")
 from custom_utils.animations import save_animation
 
-model_name = "u2002500"
-path = "C:/Users/smithr38/Code/School/Thesis-Project/results/trained_models/1/" + model_name
-env_name = "rware-tiny-2ag-v1"
+model_name = "seac/small_4p_generalized"
+path = "/home/smithr38/Thesis-Project/results/trained_models/5/u1002500"
+env_name = "rware-small-4ag-v1"
 time_limit = 500  # 25 for LBF
 
 GSHEET_ROW = None
