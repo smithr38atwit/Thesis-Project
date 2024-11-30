@@ -20,7 +20,8 @@ buffer_cpu_only: True # If true we won't keep all of the replay buffer in vram
 use_tensorboard: True # Log results to tensorboard
 save_model: True # Save the models to disk
 save_model_interval: 1000000 # Save models after this many timesteps
-checkpoint_path: "/home/smithr38/Thesis-Project/epymarl-main/results/models/base_20m_small_4ag_seed715230036" # Load a checkpoint from this path
+checkpoint_path: "/home/smithr38/Thesis-Project/epymarl-main/results/models/base_tiny_2ag_rerun_seed245807878" # Load a checkpoint from this path
+friendly_name: ""
 evaluate: False # Evaluate model for test_nepisode episodes and quit (no training)
 render: False # Render the environment when evaluating (only when evaluate == True)
 load_step: 0 # Load model trained on this many timesteps (0 if choose max possible)
