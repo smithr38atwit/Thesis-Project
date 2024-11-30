@@ -24,8 +24,6 @@ from sacred.observers import (  # noqa
 from torch.utils.tensorboard import SummaryWriter
 from wrappers import RecordEpisodeStatistics, SquashDones
 
-import utils
-
 ex = Experiment(ingredients=[algorithm])
 ex.captured_out_filter = lambda captured_output: "Output capturing turned off."
 ex.observers.append(FileStorageObserver("./results/sacred"))
@@ -52,14 +50,14 @@ def config():
     eval_dir = "./results/video/{id}"
     loss_dir = "./results/loss/{id}"
     save_dir = "./results/trained_models/{id}"
-    models_dir = "./models/seac/base_20m_small_4ag"
+    models_dir = "/home/smithr38/Thesis-Project/results/trained_models/6/u500000"
 
     log_interval = 2000
     save_interval = int(1e6)
     eval_interval = int(1e6)
     episodes_per_eval = 8
 
-    transfer = False
+    transfer = True
 
 
 for conf in glob.glob("configs/*.yaml"):
