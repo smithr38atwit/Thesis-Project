@@ -139,12 +139,18 @@ if __name__ == "__main__":
     # file_configs = parse_cli_args()
     file_configs = [
         {
-            "label": "SEAC",
-            "file": "results/sacred/5/metrics.json",
+            "label": "SEAC (Penalty=0.005)",
+            "file": "results/sacred/6/metrics.json",
             "scale": 20,
-            "offset": 40e6,
+            "offset": 20e6,
+        },
+        {
+            "label": "SEAC (Penalty=0.5)",
+            "file": "results/sacred/7/metrics.json",
+            "scale": 20,
+            "offset": 30e6,
         },
     ]
 
     # Run the main function
-    main(file_configs, "figures/tiny_1p_SEAC_5000Batch.png")
+    main(file_configs, "figures/tiny_1p_SEAC_PenaltyTest.png")
