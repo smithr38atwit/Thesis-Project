@@ -1,0 +1,114 @@
+{
+  "artifacts": [],
+  "command": "my_main",
+  "experiment": {
+    "base_dir": "/home/smithr38/Thesis-Project/epymarl-main/src",
+    "dependencies": [
+      "numpy==1.26.4",
+      "PyYAML==5.3.1",
+      "sacred==0.8.5",
+      "torch==2.2.2"
+    ],
+    "mainfile": "main.py",
+    "name": "pymarl",
+    "repositories": [
+      {
+        "commit": "68892cfd05f60f32618037bbeee55e4aef1643e8",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "68892cfd05f60f32618037bbeee55e4aef1643e8",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      },
+      {
+        "commit": "68892cfd05f60f32618037bbeee55e4aef1643e8",
+        "dirty": true,
+        "url": "https://github.com/smithr38atwit/Thesis-Project.git"
+      }
+    ],
+    "sources": [
+      [
+        "main.py",
+        "_sources/main_d72f2242a5171ea5171140b7d04c7ccb.py"
+      ],
+      [
+        "run.py",
+        "_sources/run_23f6dd89f410afca0c695cdc58c296d0.py"
+      ],
+      [
+        "utils/logging.py",
+        "_sources/logging_7799699b534f806632c1d618a6ef7e02.py"
+      ]
+    ]
+  },
+  "heartbeat": "2024-11-22T08:17:17.176631",
+  "host": {
+    "ENV": {},
+    "cpu": "AMD Ryzen Threadripper PRO 3955WX 16-Cores",
+    "gpus": {
+      "driver_version": "550.107.02",
+      "gpus": [
+        {
+          "model": "NVIDIA GeForce RTX 3090",
+          "persistence_mode": true,
+          "total_memory": 24576
+        },
+        {
+          "model": "NVIDIA GeForce RTX 3090",
+          "persistence_mode": true,
+          "total_memory": 24576
+        }
+      ]
+    },
+    "hostname": "lambda3",
+    "os": [
+      "Linux",
+      "Linux-6.8.0-40-generic-x86_64-with-glibc2.35"
+    ],
+    "python_version": "3.10.12"
+  },
+  "meta": {
+    "command": "my_main",
+    "config_updates": {
+      "env_args": {
+        "key": "rware:rware-small-4ag-v1"
+      }
+    },
+    "named_configs": [],
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--id": null,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [
+        "env_args.key=rware:rware-small-4ag-v1"
+      ],
+      "help": false,
+      "with": true
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2024-11-22T04:40:56.035645",
+  "status": "COMPLETED",
+  "stop_time": "2024-11-22T08:17:17.153823"
+}
