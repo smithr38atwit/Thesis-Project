@@ -26,7 +26,7 @@ from wrappers import RecordEpisodeStatistics, SquashDones
 
 ex = Experiment(ingredients=[algorithm])
 ex.captured_out_filter = lambda captured_output: "Output capturing turned off."
-ex.observers.append(FileStorageObserver("./results/sacred"))
+ex.observers.append(FileStorageObserver("./seac/results/sacred"))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -47,9 +47,9 @@ def config():
 
     num_env_steps = 100e6
 
-    eval_dir = "./results/video/{id}"
-    loss_dir = "./results/loss/{id}"
-    save_dir = "./results/trained_models/{id}"
+    eval_dir = "./seac/results/video/{id}"
+    loss_dir = "./seac/results/loss/{id}"
+    save_dir = "./seac/results/trained_models/{id}"
     models_dir = "/home/smithr38/Thesis-Project/results/trained_models/6/u500000"
 
     log_interval = 2000
