@@ -229,7 +229,7 @@ class Warehouse(gym.Env):
         max_inactivity_steps: Optional[int],
         max_steps: Optional[int],
         reward_type: RewardType,
-        n_people: int = 0,
+        n_people: int = 1,
         layout: str = None,
         observation_type: ObserationType = ObserationType.FLATTENED,
         image_observation_layers: List[ImageLayer] = [
@@ -673,28 +673,33 @@ class Warehouse(gym.Env):
 
             for i, (id_agent, id_shelf) in enumerate(zip(agents, shelfs)):
                 if id_agent <= 0:
-                    obs.skip(1)
-                    obs.write([1.0])
-                    obs.skip(3 + self.msg_bits)
+                    # No agent present
+                    obs.skip(1)  # Skip agent bit
+                    obs.write([1.0])  # One in first direction bit
+                    obs.skip(3 + self.msg_bits)  # Skip remaining direction and message bits
                 else:
-                    obs.write([1.0])
+                    obs.write([1.0])  # agent present
                     direction = np.zeros(4)
                     direction[self.agents[id_agent - 1].dir.value] = 1.0
-                    obs.write(direction)
+                    obs.write(direction)  # onehot agent direction
                     if self.msg_bits > 0:
-                        obs.write(self.agents[id_agent - 1].message)
+                        obs.write(self.agents[id_agent - 1].message)  # agent message
                 if id_shelf == 0:
-                    obs.skip(2)
+                    obs.skip(2)  # no shelf or requested shelf
                 else:
-                    obs.write([1.0, int(self.shelfs[id_shelf - 1] in self.request_queue)])
+                    obs.write(
+                        [1.0, int(self.shelfs[id_shelf - 1] in self.request_queue)]
+                    )  # shelf presence and request status
                 if id_agent < 0:
+                    # person present
                     obs.write([1.0])
                     direction = np.zeros(4)
                     direction[self.people[-1 * id_agent - 1].dir.value] = 1.0
-                    obs.write(direction)
+                    obs.write(direction)  # onehot person direction
                 else:
+                    # not person present
                     obs.skip(1)
-                    obs.write([1.0])
+                    obs.write([1.0])  # first direction bit
                     obs.skip(3)
 
             return obs.vector
