@@ -21,34 +21,36 @@ def smooth_values(values, alpha):
 
 
 # Function to load JSON data and preprocess
-def load_and_process_json(file_path, scale=1.0, offset=0, min_step=None, max_step=None):
-    with open(file_path, "r") as f:
-        data = json.load(f)
+def load_and_process_json(files, scale=1.0, offset=0, min_step=None, max_step=None):
+    all_steps, all_values = [], []
 
-    # Support both possible keys
-    key = "episode_reward" if "episode_reward" in data else "return_mean"
-    if key not in data:
-        raise ValueError(f"Neither 'episode_reward' nor 'return_mean' found in {file_path}")
+    for file_path in files:
+        with open(file_path, "r") as f:
+            data = json.load(f)
 
-    # Extract steps and values
-    steps = data[key]["steps"]
-    values = data[key]["values"]
+        # Support both possible keys
+        key = "episode_reward" if "episode_reward" in data else "return_mean"
+        if key not in data:
+            raise ValueError(f"Neither 'episode_reward' nor 'return_mean' found in {file_path}")
 
-    # Scale and offset steps
-    scaled_steps = [(step * scale) + offset for step in steps]
+        # Extract steps and values
+        steps = data[key]["steps"]
+        values = data[key]["values"]
 
-    # Apply step range filtering
-    filtered_steps, filtered_values = [], []
-    for step, value in zip(scaled_steps, values):
-        if (min_step is None or step >= min_step) and (max_step is None or step <= max_step):
-            filtered_steps.append(step)
-            filtered_values.append(value)
+        # Scale and offset steps
+        scaled_steps = [(step * scale) + offset for step in steps]
 
-    return filtered_steps, filtered_values
+        # Apply step range filtering
+        for step, value in zip(scaled_steps, values):
+            if (min_step is None or step >= min_step) and (max_step is None or step <= max_step):
+                all_steps.append(step)
+                all_values.append(value)
+
+    return all_steps, all_values
 
 
 # Function to plot data
-def save_plot(data, labels, output_file, alpha=0.2):
+def save_plot(data, labels, output_file, alpha=0.15):
     sns.set_theme(style="darkgrid")
     plt.figure(figsize=(10, 6))
 
@@ -68,7 +70,7 @@ def save_plot(data, labels, output_file, alpha=0.2):
 
     plt.xlabel("Steps")
     plt.ylabel("Returns")
-    plt.ylim(bottom=0)
+    plt.ylim(bottom=-5, top=20)
     # plt.title("")
     plt.legend()
 
@@ -81,15 +83,15 @@ def save_plot(data, labels, output_file, alpha=0.2):
 def main(file_configs, output_file):
     data = []
     for config in file_configs:
-        file_path = config["file"]
+        files = config["files"]
         scale = config.get("scale", 1.0)
         offset = config.get("offset", 0.0)
         min_step = config.get("min_step", None)
         max_step = config.get("max_step", None)
-        label = config.get("label", file_path)
+        label = config.get("label", ", ".join(files))
 
         # Load and process JSON
-        steps, values = load_and_process_json(file_path, scale, offset, min_step, max_step)
+        steps, values = load_and_process_json(files, scale, offset, min_step, max_step)
         data.append((steps, values, label))
 
     # Save the plot
@@ -139,18 +141,17 @@ if __name__ == "__main__":
     # file_configs = parse_cli_args()
     file_configs = [
         {
-            "label": "SEAC (Penalty=0.005)",
-            "file": "results/sacred/6/metrics.json",
-            "scale": 20,
-            "offset": 20e6,
+            "label": "0p",
+            "files": [
+                "epymarl-main/results/sacred/mappo_ns/rware_rware-tiny-2ag-v1/1/metrics.json",
+                "epymarl-main/results/sacred/mappo_ns/rware_rware-tiny-2ag-v1/2/metrics.json",
+            ],
         },
         {
-            "label": "SEAC (Penalty=0.5)",
-            "file": "results/sacred/7/metrics.json",
-            "scale": 20,
-            "offset": 30e6,
+            "label": "1p",
+            "files": ["epymarl-main/results/sacred/mappo_ns/rware_rware-tiny-2ag-v1/3/metrics.json"],
         },
     ]
 
     # Run the main function
-    main(file_configs, "figures/tiny_1p_SEAC_PenaltyTest.png")
+    main(file_configs, "figures/no_param_share.png")
