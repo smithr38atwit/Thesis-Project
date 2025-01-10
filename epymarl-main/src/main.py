@@ -14,7 +14,9 @@ from sacred.observers import FileStorageObserver, MongoObserver
 from sacred.utils import apply_backspaces_and_linefeeds
 from utils.logging import get_logger
 
-SETTINGS["CAPTURE_MODE"] = "fd"  # set to "no" if you want to see stdout/stderr in console, "fd" works on Linux systems
+SETTINGS["CAPTURE_MODE"] = (
+    "sys"  # set to "no" if you want to see stdout/stderr in console, "fd" works on Linux systems, "sys" otherwise
+)
 logger = get_logger()
 
 ex = Experiment("pymarl")
